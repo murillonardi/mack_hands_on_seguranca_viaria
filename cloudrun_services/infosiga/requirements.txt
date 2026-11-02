@@ -1,1 +1,4 @@
-Arquivo com os requirements do código main.py do Infosiga
+Flask==3.1.0
+gunicorn==23.0.0
+requests==2.32.3
+google-cloud-storage==2.19.0
