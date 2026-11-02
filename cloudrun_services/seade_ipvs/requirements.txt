@@ -1,0 +1,1 @@
+Requirements do arquivo main.py do seade_ipvs
