@@ -7,9 +7,17 @@ locals {
   ]
 }
 
+#Criação do Artifact Registry
+resource "google_artifact_registry_repository" "repo" {
+  location      = var.region
+  repository_id = "data-pipelines-repo"
+  description   = "Repositório para imagens Docker dos pipelines de dados"
+  format        = "DOCKER"
+}
+
 resource "google_service_account" "cloud_run_sa" {
-  account_id   = "infosiga-runner-sa"
-  display_name = "Service Account para Ingestão do InfoSiga no Cloud Run"
+  account_id   = "38933711443-compute"
+  display_name = "Service Account para Ingestão dos Arquivos via Functions do Cloud Run"
 }
 
 # Concede permissão de escrita (Object Admin) nos 3 buckets para a Service Account
@@ -31,7 +39,7 @@ resource "google_cloud_run_v2_service" "infosiga" {
     containers {
       image = var.infosiga_image
       resources {
-        limits = { memory = "2Gi", cpu = "1000m" }
+        limits = { memory = "0.5Gi", cpu = "1000m" }
       }
     }
   }
@@ -47,24 +55,29 @@ resource "google_cloud_run_v2_service" "seade" {
     containers {
       image = var.seade_image
       resources {
-        limits = { memory = "1Gi", cpu = "1000m" } // Ajuste o recurso conforme a necessidade do SEADE
+        limits = { memory = "0.5Gi", cpu = "1000m" } // Ajuste o recurso conforme a necessidade do SEADE
       }
     }
   }
 }
 
-resource "google_cloud_scheduler_job" "seade_trigger" {
-  name        = "seade-ipvs-monthly-trigger"
-  region      = var.region
-  schedule    = "0 7 * * 1-5"
-  time_zone   = "America/Sao_Paulo"
+resource "google_service_account" "scheduler_sa" {
+  account_id   = "data-scheduler-sa"
+  display_name = "Service Account para disparar os Cloud Schedulers"
+}
 
-  http_target {
-    http_method = "POST"
-    uri         = google_cloud_run_v2_service.seade.uri
-    oidc_token {
-      service_account_email = google_service_account.scheduler_sa.email
-      audience              = google_cloud_run_v2_service.seade.uri
-    }
-  }
+# Permissão para o Scheduler invocar o InfoSiga
+resource "google_cloud_run_v2_service_iam_member" "infosiga_invoker" {
+  name     = google_cloud_run_v2_service.infosiga.name
+  location = google_cloud_run_v2_service.infosiga.location
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.scheduler_sa.email}"
+}
+
+# Permissão para o Scheduler invocar o SEADE
+resource "google_cloud_run_v2_service_iam_member" "seade_invoker" {
+  name     = google_cloud_run_v2_service.seade.name
+  location = google_cloud_run_v2_service.seade.location
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.scheduler_sa.email}"
 }
