@@ -8,12 +8,8 @@ SELECT
     UPPER(TRIM(tipo_registro)) AS tipo_registro,
     
     -- Campos temporais padronizados
-    data_sinistro,
-    ano_sinistro,
-    mes_sinistro,
-    dia_sinistro,
+    data_sinistro, -- remocao de campos redundantes: ano_sinistro,mes_sinistro,dia_sinistro,ano_mes_sinistro, dia_da_semana
     hora_sinistro,
-    ano_mes_sinistro,
     UPPER(TRIM(dia_da_semana)) AS dia_da_semana,
     
     -- Padronização de turno
@@ -21,7 +17,6 @@ SELECT
     
     -- Localização e Vias
     UPPER(TRIM(logradouro)) AS logradouro,
-    numero_logradouro,
     COALESCE(NULLIF(UPPER(TRIM(tipo_via)), 'NAO DISPONIVEL'), null) AS tipo_via,
     COALESCE(NULLIF(UPPER(TRIM(tipo_local)), 'NAO DISPONIVEL'), null) AS tipo_local,
     
@@ -47,7 +42,7 @@ SELECT
     COALESCE(qtd_automovel, 0) AS qtd_automovel,
     COALESCE(qtd_onibus, 0) AS qtd_onibus,
     COALESCE(qtd_caminhao, 0) AS qtd_caminhao,
-    COALESCE(qtd_veic_outros, 0) AS qtd_veic_outros,
+    COALESCE(qtd_veic_outros, 0) + COALESCE(qtd_veic_nao_disponivel, 0) AS qtd_veic_outros,
     COALESCE(qtd_veic_nao_disponivel, 0) AS qtd_veic_nao_disponivel,
     
     -- Conversão de nulos para 0 nas contagens de gravidade
