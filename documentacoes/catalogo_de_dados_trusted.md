@@ -1,4 +1,4 @@
-# 📊 Dicionário de Dados - Camada Trusted (InfoSiga / MBA)
+# 📊 Dicionário de Dados - Camada Trusted (InfoSiga)
 
 Este repositório contém a documentação técnica e os metadados oficiais da camada **Trusted** da arquitetura medalhão para os dados de acidentes de trânsito (InfoSiga).
 
