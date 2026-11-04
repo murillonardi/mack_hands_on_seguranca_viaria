@@ -1,11 +1,11 @@
-# 📊 Dicionário de Dados - Camada Silver (InfoSiga / MBA)
+# 📊 Dicionário de Dados - Camada Trusted (InfoSiga)
 
-Este repositório contém a documentação técnica e os metadados oficiais da camada **Silver** da arquitetura medalhão para os dados de acidentes de trânsito (InfoSiga).
+Este repositório contém a documentação técnica e os metadados oficiais da camada **Trusted** da arquitetura medalhão para os dados de acidentes de trânsito (InfoSiga).
 
 ---
 
-## 🚘 1. Tabela: `silver_accidents`
-> **Descrição:** Tabela Silver padronizada com ocorrências de acidentes, coordenadas geográficas, contagem de veículos/vítimas e flags de tipologia.
+## 1. Tabela: `trusted_accidents`
+> **Descrição:** Tabela Trusted padronizada com ocorrências de acidentes, coordenadas geográficas, contagem de veículos/vítimas e flags de tipologia.
 
 | Nome do Campo | Tipo de Dado | Aceita Nulo | Descrição / Metadado |
 | :--- | :--- | :---: | :--- |
@@ -60,8 +60,8 @@ Este repositório contém a documentação técnica e os metadados oficiais da c
 
 ---
 
-## 🏍️ 2. Tabela: `silver_vehicles`
-> **Descrição:** Tabela Silver padronizada com dados individuais dos veículos envolvidos em acidentes.
+## 2. Tabela: `trusted_vehicles`
+> **Descrição:** Tabela Trusted padronizada com dados individuais dos veículos envolvidos em acidentes.
 
 | Nome do Campo | Tipo de Dado | Aceita Nulo | Descrição / Metadado |
 | :--- | :--- | :---: | :--- |
@@ -82,8 +82,8 @@ Este repositório contém a documentação técnica e os metadados oficiais da c
 
 ---
 
-## 👤 3. Tabela: `silver_people`
-> **Descrição:** Tabela Silver com perfil demográfico, gravidade e registros de envolvidos/vítimas nos sinistros.
+## 3. Tabela: `trusted_people`
+> **Descrição:** Tabela Trusted com perfil demográfico, gravidade e registros de envolvidos/vítimas nos sinistros.
 
 | Nome do Campo | Tipo de Dado | Aceita Nulo | Descrição / Metadado |
 | :--- | :--- | :---: | :--- |
