@@ -1,13 +1,17 @@
 locals {
-  buckets = [
+  all_buckets = [
     "dados-infosiga-pessoas",
     "dados-infosiga-sinistros",
     "dados-infosiga-veiculos",
-    "dados-seade-ipvs"
+    "dados-seade-ipvs",
+    "dados_seade_idpm",
+    "dados_seade_idpm_grupos",
+    "dados-seade-mortalidade",
+    "dados-seade-ipvs-entorno"
   ]
 }
 
-#Criação do Artifact Registry
+# --- 1. ARTIFACT REGISTRY (Repositório Docker Compartilhado) ---
 resource "google_artifact_registry_repository" "repo" {
   location      = var.region
   repository_id = "data-pipelines-repo"
@@ -15,20 +19,22 @@ resource "google_artifact_registry_repository" "repo" {
   format        = "DOCKER"
 }
 
+# --- 2. SERVICE ACCOUNT & IAM (Execução dos Containers) ---
 resource "google_service_account" "cloud_run_sa" {
-  account_id   = "38933711443-compute"
-  display_name = "Service Account para Ingestão dos Arquivos via Functions do Cloud Run"
+  account_id   = "data-runner-sa"
+  display_name = "Service Account unificada para os pipelines no Cloud Run"
 }
 
-# Concede permissão de escrita (Object Admin) nos 3 buckets para a Service Account
+# Concede permissão de Object Admin em todos os buckets existentes para a Service Account
 resource "google_storage_bucket_iam_member" "bucket_permissions" {
-  for_each = toset(local.buckets)
+  for_each = toset(local.all_buckets)
 
-  bucket = google_storage_bucket.infosiga_buckets[each.value].name
+  bucket = each.value
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
+# --- 3. CLOUD RUN: INFOSIGA ---
 resource "google_cloud_run_v2_service" "infosiga" {
   name     = "infosiga-ingestion"
   location = var.region
@@ -36,15 +42,15 @@ resource "google_cloud_run_v2_service" "infosiga" {
 
   template {
     service_account = google_service_account.cloud_run_sa.email
+    scaling { max_instance_count = 1; min_instance_count = 0 }
     containers {
       image = var.infosiga_image
-      resources {
-        limits = { memory = "0.5Gi", cpu = "1000m" }
-      }
+      resources { limits = { memory = "2Gi", cpu = "1000m" } }
     }
   }
 }
 
+# --- 4. CLOUD RUN: SEADE IPVS ---
 resource "google_cloud_run_v2_service" "seade" {
   name     = "seade-ipvs-ingestion"
   location = var.region
@@ -52,32 +58,79 @@ resource "google_cloud_run_v2_service" "seade" {
 
   template {
     service_account = google_service_account.cloud_run_sa.email
+    scaling { max_instance_count = 1; min_instance_count = 0 }
     containers {
       image = var.seade_image
-      resources {
-        limits = { memory = "0.5Gi", cpu = "1000m" } // Ajuste o recurso conforme a necessidade do SEADE
-      }
+      resources { limits = { memory = "1Gi", cpu = "1000m" } }
+      env { name = "BUCKET_NAME"; value = "dados-seade-ipvs" }
     }
   }
 }
 
-resource "google_service_account" "scheduler_sa" {
-  account_id   = "data-scheduler-sa"
-  display_name = "Service Account para disparar os Cloud Schedulers"
+# --- 5. CLOUD RUN: SEADE IDPM ---
+resource "google_cloud_run_v2_service" "seade_idpm" {
+  name     = "seade-idpm-ingestion"
+  location = var.region
+  ingress  = "INGRESS_TRAFFIC_ALL"
+
+  template {
+    service_account = google_service_account.cloud_run_sa.email
+    scaling { max_instance_count = 1; min_instance_count = 0 }
+    containers {
+      image = var.seade_idpm_image
+      resources { limits = { memory = "1Gi", cpu = "1000m" } }
+      env { name = "BUCKET_NAME"; value = "dados_seade_idpm" }
+    }
+  }
 }
 
-# Permissão para o Scheduler invocar o InfoSiga
-resource "google_cloud_run_v2_service_iam_member" "infosiga_invoker" {
-  name     = google_cloud_run_v2_service.infosiga.name
-  location = google_cloud_run_v2_service.infosiga.location
-  role     = "roles/run.invoker"
-  member   = "serviceAccount:${google_service_account.scheduler_sa.email}"
+# --- 6. CLOUD RUN: SEADE IDPM GRUPOS ---
+resource "google_cloud_run_v2_service" "seade_idpm_grupos" {
+  name     = "seade-idpm-grupos-ingestion"
+  location = var.region
+  ingress  = "INGRESS_TRAFFIC_ALL"
+
+  template {
+    service_account = google_service_account.cloud_run_sa.email
+    scaling { max_instance_count = 1; min_instance_count = 0 }
+    containers {
+      image = var.seade_idpm_grupos_image
+      resources { limits = { memory = "1Gi", cpu = "1000m" } }
+      env { name = "BUCKET_NAME"; value = "dados_seade_idpm_grupos" }
+    }
+  }
 }
 
-# Permissão para o Scheduler invocar o SEADE
-resource "google_cloud_run_v2_service_iam_member" "seade_invoker" {
-  name     = google_cloud_run_v2_service.seade.name
-  location = google_cloud_run_v2_service.seade.location
-  role     = "roles/run.invoker"
-  member   = "serviceAccount:${google_service_account.scheduler_sa.email}"
+# --- 7. CLOUD RUN: SEADE MORTALIDADE ---
+resource "google_cloud_run_v2_service" "seade_mortalidade" {
+  name     = "seade-mortalidade-ingestion"
+  location = var.region
+  ingress  = "INGRESS_TRAFFIC_ALL"
+
+  template {
+    service_account = google_service_account.cloud_run_sa.email
+    scaling { max_instance_count = 1; min_instance_count = 0 }
+    containers {
+      image = var.seade_mortalidade_image
+      resources { limits = { memory = "1Gi", cpu = "1000m" } }
+      env { name = "BUCKET_NAME"; value = "dados-seade-mortalidade" }
+    }
+  }
+}
+
+# --- 8. CLOUD RUN: SEADE IPVS ENTORNO ---
+resource "google_cloud_run_v2_service" "seade_ipvs_entorno" {
+  name     = "seade-ipvs-entorno-ingestion"
+  location = var.region
+  ingress  = "INGRESS_TRAFFIC_ALL"
+
+  template {
+    service_account = google_service_account.cloud_run_sa.email
+    scaling { max_instance_count = 1; min_instance_count = 0 }
+    containers {
+      image = var.seade_ipvs_entorno_image
+      resources { limits = { memory = "1Gi", cpu = "1000m" } }
+      env { name = "BUCKET_NAME"; value = "dados-seade-ipvs-entorno" }
+    }
+  }
 }
