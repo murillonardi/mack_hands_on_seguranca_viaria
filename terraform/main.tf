@@ -12,6 +12,10 @@ terraform {
   }
 }
 
+provider "google" {
+  region = var.region
+}
+
 locals {
   all_buckets = [
     "dados-infosiga-pessoas",
