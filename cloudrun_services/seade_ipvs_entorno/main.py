@@ -8,8 +8,8 @@ app = Flask(__name__)
 
 SEADE_URL = "https://repositorio.seade.gov.br/dataset/27830d72-14ea-4acc-a458-d95ce71994cf/resource/4956eb14-b5ba-4cbc-8edc-ff024ef06a87/download/infra_ipvs_entorno_esp.csv"
 BUCKET_NAME = os.environ.get("BUCKET_NAME", "dados-seade-ipvs-entorno")
-FILE_NAME = "seade_ipvs_entorno_{CURRENT_DATE}.csv"
 CURRENT_DATE = datetime.now().strftime("%Y%m%d")
+FILE_NAME = "seade_ipvs_entorno_{CURRENT_DATE}.csv"
 
 
 @app.route("/", methods=["POST", "GET"])
