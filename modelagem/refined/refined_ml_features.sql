@@ -6,10 +6,22 @@ WITH pessoas_agregadas_sinistro AS (
     SELECT
         id_sinistro,
         COUNT(DISTINCT id_pessoa) AS total_pessoas_envolvidas,
-        COUNT(DISTINCT CASE WHEN UPPER(TRIM(nacionalidade)) LIKE '%BRASIL%' THEN id_pessoa END) AS qtd_nacionalidade_brasileira,
-        COUNT(DISTINCT CASE WHEN UPPER(TRIM(nacionalidade)) NOT LIKE '%BRASIL%' AND nacionalidade IS NOT NULL THEN id_pessoa END) AS qtd_nacionalidade_estrangeira,
-        COUNT(DISTINCT CASE WHEN UPPER(TRIM(grau_de_instrucao)) LIKE '%FUNDAMENTAL%' OR UPPER(TRIM(grau_de_instrucao)) LIKE '%BASICO%' THEN id_pessoa END) AS qtd_ensino_basico,
-        COUNT(DISTINCT CASE WHEN UPPER(TRIM(grau_de_instrucao)) LIKE '%SUPERIOR%' THEN id_pessoa END) AS qtd_ensino_superior
+
+        -- tipo_de_pessoa
+        COUNT(DISTINCT CASE WHEN tipo_de_pessoa = 'PEDESTRE' THEN id_pessoa END) AS qtd_pedestre,
+        COUNT(DISTINCT CASE WHEN tipo_de_pessoa = 'PASSAGEIRO' THEN id_pessoa END) AS qtd_passageiro,
+        COUNT(DISTINCT CASE WHEN tipo_de_pessoa = 'CONDUTOR' THEN id_pessoa END) AS qtd_condutor,
+        COUNT(DISTINCT CASE WHEN tipo_de_pessoa is null THEN id_pessoa END) AS qtd_pessoa_outros,
+
+        -- grau_de_instrucao
+        COUNT(DISTINCT CASE WHEN grau_de_instrucao = 'BÁSICO' THEN id_pessoa END) AS qtd_ensino_basico,
+        COUNT(DISTINCT CASE WHEN grau_de_instrucao = 'MÉDIO' THEN id_pessoa END) AS qtd_ensino_medio,
+        COUNT(DISTINCT CASE WHEN grau_de_instrucao = 'SUPERIOR' THEN id_pessoa END) AS qtd_ensino_superior,
+        
+        -- nacionalidade
+        COUNT(DISTINCT CASE WHEN nacionalidade = 'BRASILEIRA' THEN id_pessoa END) AS qtd_nacionalidade_brasileira,
+        COUNT(DISTINCT CASE WHEN nacionalidade = 'ESTRANGEIRA' THEN id_pessoa END) AS qtd_nacionalidade_estrangeira,
+        
     FROM 
         `project-f1079166-4703-4cc3-975.refined_data_bi.dim_pessoa`
     GROUP BY 
@@ -30,18 +42,12 @@ veiculos_agregados_sinistro AS (
 sinistros_completos AS (
     -- Junta a Fato com as dimensões de tempo e os resumos de pessoas/veículos
     SELECT
-        f.*,
+        f.* except (qtd_pedestre),
         l.cod_ibge,
         t.turno,
         t.dia_da_semana,
-        COALESCE(p.total_pessoas_envolvidas, 0) AS total_pessoas_envolvidas,
-        COALESCE(p.qtd_nacionalidade_brasileira, 0) AS qtd_nacionalidade_brasileira,
-        COALESCE(p.qtd_nacionalidade_estrangeira, 0) AS qtd_nacionalidade_estrangeira,
-        COALESCE(p.qtd_ensino_basico, 0) AS qtd_ensino_basico,
-        COALESCE(p.qtd_ensino_superior, 0) AS qtd_ensino_superior,
-        COALESCE(v.total_veiculos_envolvidos, 0) AS total_veiculos_envolvidos,
-        COALESCE(v.qtd_veiculos_moto, 0) AS qtd_veiculos_moto,
-        COALESCE(v.qtd_veiculos_automovel, 0) AS qtd_veiculos_automovel
+        p.* except (id_sinistro),
+        v.* except(id_sinistro)
     FROM 
         `project-f1079166-4703-4cc3-975.refined_data_bi.fct_acidente` f
     INNER JOIN 
@@ -91,6 +97,12 @@ agregado_por_municipio AS (
         SAFE_DIVIDE(SUM(qtd_veiculos_automovel), SUM(NULLIF(total_veiculos_envolvidos, 0))) AS pct_veiculos_automovel,
         
         -- Proporções demográficas e de instrução (% do total de pessoas)
+        SAFE_DIVIDE(SUM(qtd_pedestre), SUM(NULLIF(total_pessoas_envolvidas, 0))) AS pct_pessoa_pedestre,
+        SAFE_DIVIDE(SUM(qtd_passageiro), SUM(NULLIF(total_pessoas_envolvidas, 0))) AS pct_pessoa_pedestre,
+        SAFE_DIVIDE(SUM(qtd_condutor), SUM(NULLIF(total_pessoas_envolvidas, 0))) AS pct_pessoa_pedestre,
+        SAFE_DIVIDE(SUM(qtd_pessoa_outros), SUM(NULLIF(total_pessoas_envolvidas, 0))) AS pct_pessoa_pedestre,
+
+        SAFE_DIVIDE(SUM(qtd_nacionalidade_brasileira), SUM(NULLIF(total_pessoas_envolvidas, 0))) AS pct_nacionalidade_brasileira,
         SAFE_DIVIDE(SUM(qtd_nacionalidade_estrangeira), SUM(NULLIF(total_pessoas_envolvidas, 0))) AS pct_nacionalidade_estrangeira,
         SAFE_DIVIDE(SUM(qtd_ensino_basico), SUM(NULLIF(total_pessoas_envolvidas, 0))) AS pct_ensino_basico,
         SAFE_DIVIDE(SUM(qtd_ensino_superior), SUM(NULLIF(total_pessoas_envolvidas, 0))) AS pct_ensino_superior,
