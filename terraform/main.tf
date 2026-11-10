@@ -1,3 +1,17 @@
+terraform {
+  required_version = ">= 1.5.0"
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+  }
+  backend "gcs" {
+    bucket = "mack-terraform-state-backup"
+    prefix = "terraform/state/data-pipelines"
+  }
+}
+
 locals {
   all_buckets = [
     "dados-infosiga-pessoas",
