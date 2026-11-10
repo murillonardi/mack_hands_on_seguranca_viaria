@@ -41,7 +41,10 @@ resource "google_cloud_run_v2_service" "infosiga" {
 
   template {
     service_account = google_service_account.cloud_run_sa.email
-    scaling { max_instance_count = 1; min_instance_count = 0 }
+    scaling {
+      max_instance_count = 1
+      min_instance_count = 0
+    }
     containers {
       image = var.infosiga_image
       resources { limits = { memory = "2Gi", cpu = "1000m" } }
@@ -57,11 +60,17 @@ resource "google_cloud_run_v2_service" "seade_idpm" {
 
   template {
     service_account = google_service_account.cloud_run_sa.email
-    scaling { max_instance_count = 1; min_instance_count = 0 }
+    scaling {
+      max_instance_count = 1
+      min_instance_count = 0
+    }
     containers {
       image = var.seade_idpm_image
       resources { limits = { memory = "1Gi", cpu = "1000m" } }
-      env { name = "BUCKET_NAME"; value = "dados_seade_idpm" }
+      env { 
+        name = "BUCKET_NAME" 
+        value = "dados_seade_idpm" 
+      }
     }
   }
 }
@@ -74,11 +83,17 @@ resource "google_cloud_run_v2_service" "seade_idpm_grupos" {
 
   template {
     service_account = google_service_account.cloud_run_sa.email
-    scaling { max_instance_count = 1; min_instance_count = 0 }
+    scaling {
+      max_instance_count = 1
+      min_instance_count = 0
+    }
     containers {
       image = var.seade_idpm_grupos_image
       resources { limits = { memory = "1Gi", cpu = "1000m" } }
-      env { name = "BUCKET_NAME"; value = "dados_seade_idpm_grupos" }
+      env { 
+        name = "BUCKET_NAME" 
+        value = "dados_seade_idpm_grupos" 
+      }
     }
   }
 }
@@ -91,11 +106,17 @@ resource "google_cloud_run_v2_service" "seade_mortalidade" {
 
   template {
     service_account = google_service_account.cloud_run_sa.email
-    scaling { max_instance_count = 1; min_instance_count = 0 }
+    scaling {
+      max_instance_count = 1
+      min_instance_count = 0
+    }
     containers {
       image = var.seade_mortalidade_image
       resources { limits = { memory = "1Gi", cpu = "1000m" } }
-      env { name = "BUCKET_NAME"; value = "dados-seade-mortalidade" }
+      env { 
+        name = "BUCKET_NAME" 
+        value = "dados-seade-mortalidade" 
+      }
     }
   }
 }
@@ -108,11 +129,19 @@ resource "google_cloud_run_v2_service" "seade_ipvs_entorno" {
 
   template {
     service_account = google_service_account.cloud_run_sa.email
-    scaling { max_instance_count = 1; min_instance_count = 0 }
+    scaling {
+      max_instance_count = 1
+      min_instance_count = 0
+    }
     containers {
       image = var.seade_ipvs_entorno_image
       resources { limits = { memory = "1Gi", cpu = "1000m" } }
-      env { name = "BUCKET_NAME"; value = "dados-seade-ipvs-entorno" }
+      env {  
+        name = "BUCKET_NAME" 
+        value = "dados-seade-ipvs-entorno" 
+      }
     }
+  }
+}
   }
 }
