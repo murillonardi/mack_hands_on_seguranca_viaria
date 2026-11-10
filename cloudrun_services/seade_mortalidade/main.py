@@ -2,13 +2,14 @@ import os
 import requests
 from flask import Flask, jsonify
 from google.cloud import storage
+from datetime import datetime
 
 app = Flask(__name__)
 
 SEADE_URL = "https://repositorio.seade.gov.br/dataset/ceb51484-b92f-4c06-a611-87abc493ce47/resource/a06203b9-6716-4685-9053-25e788571941/download/mortalidade_geral.csv"
 BUCKET_NAME = os.environ.get("BUCKET_NAME", "dados-seade-mortalidade")
-FILE_NAME = "seade_mortalidade_geral.csv"
-
+FILE_NAME = "seade_mortalidade_geral_{CURRENT_DATE}.csv"
+CURRENT_DATE = datetime.now().strftime("%Y%m%d")
 
 @app.route("/", methods=["POST", "GET"])
 def run_pipeline():
