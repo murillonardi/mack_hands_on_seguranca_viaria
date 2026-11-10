@@ -29,10 +29,10 @@ FROM
   `project-f1079166-4703-4cc3-975.trusted_data.trusted_accidents`
 ;
 
-CREATE OR REPLACE TABLE `project-f1079166-4703-4cc3-975.refined_data_bi.dim_tipo_acidente` 
+CREATE OR REPLACE TABLE `project-f1079166-4703-4cc3-975.refined_data_bi.fct_acidente` 
 AS
 SELECT distinct
-  GENERATE_UUID() AS sk_tipo_acidente,
+  id_sinistro,
   tp_sinistro_primario,
   flg_atrop_pedestre,
   flg_atrop_vitima_fora_veic,
