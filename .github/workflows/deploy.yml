@@ -35,6 +35,14 @@ jobs:
       - name: Configure Docker Client
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
+      - name: Ensure Artifact Registry Exists
+        run: |
+          gcloud artifacts repositories create ${{ env.REPOSITORY }} \
+            --repository-format=docker \
+            --location=${{ env.REGION }} \
+            --description="Repositório para imagens Docker dos pipelines de dados" \
+            || echo "Repositório já existe, prosseguindo..."
+
       # --- 4. BUILD & PUSH DAS 6 IMAGENS DOCKER ---
 
       - name: Build & Push InfoSiga
