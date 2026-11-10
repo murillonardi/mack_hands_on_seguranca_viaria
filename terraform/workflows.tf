@@ -5,7 +5,7 @@ resource "google_service_account" "workflow_sa" {
 }
 
 # Concede permissão para o Workflow invocar os serviços do Cloud Run
-resource "google_cloud_run_service_iam_member" "workflow_invoker" {
+resource "google_cloud_run_v2_service_iam_member" "workflow_invoker" {
   for_each = {
     infosiga = google_cloud_run_v2_service.infosiga.name
     seade_idpm = google_cloud_run_v2_service.seade_idpm
