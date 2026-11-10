@@ -2,12 +2,14 @@ import os
 import requests
 from flask import Flask, jsonify
 from google.cloud import storage
+from datetime import datetime
 
 app = Flask(__name__)
 
 SEADE_URL = "https://repositorio.seade.gov.br/dataset/f714bdee-3f8c-464e-9e45-07a0e444937a/resource/5684399c-2175-4749-8914-babd5c9eaaef/download/ipdm.csv"
 BUCKET_NAME = os.environ.get("BUCKET_NAME", "dados_seade_idpm")
-FILE_NAME = "seade_ipdm.csv"
+FILE_NAME = f"seade_ipdm_{CURRENT_DATE}.csv"
+CURRENT_DATE = datetime.now().strftime("%Y%m%d")
 
 
 @app.route("/", methods=["POST", "GET"])
