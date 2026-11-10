@@ -14,10 +14,6 @@ variable "infosiga_image" {
   type = string
 }
 
-variable "seade_image" {
-  type = string
-}
-
 variable "seade_idpm_image" {
   type = string
 }
