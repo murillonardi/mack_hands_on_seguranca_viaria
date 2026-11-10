@@ -143,5 +143,3 @@ resource "google_cloud_run_v2_service" "seade_ipvs_entorno" {
     }
   }
 }
-  }
-}
