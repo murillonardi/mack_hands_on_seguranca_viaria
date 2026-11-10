@@ -6,13 +6,13 @@ resource "google_service_account" "workflow_sa" {
 
 # Concede permissão para o Workflow invocar os serviços do Cloud Run
 resource "google_cloud_run_v2_service_iam_member" "workflow_invoker" {
-  for_each = {
-    infosiga = google_cloud_run_v2_service.infosiga.name
-    seade_idpm = google_cloud_run_v2_service.seade_idpm
-    seade_idpm_grupos = google_cloud_run_v2_service.seade_idpm_grupos
-    seade_mortalidade = google_cloud_run_v2_service.seade_mortalidade
-    seade_ipvs_entorno = google_cloud_run_v2_service.seade_ipvs_entorno
-  }
+  for_each = toset([
+    "infosiga-ingestion",
+    "seade-idpm-ingestion",
+    "seade-idpm-grupos-ingestion",
+    "seade-mortalidade-ingestion",
+    "seade-ipvs-entorno-ingestion"
+  ])
 
   location     = var.region
   project      = var.project_id
