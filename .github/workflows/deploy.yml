@@ -43,7 +43,29 @@ jobs:
             --description="Repositório para imagens Docker dos pipelines de dados" \
             || echo "Repositório já existe, prosseguindo..."
 
-      # --- 4. BUILD & PUSH DAS 6 IMAGENS DOCKER ---
+      # --- SETUP E CRIAÇÃO PRÉVIA DO REPOSITÓRIO VIA TERRAFORM ---
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.7"
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Terraform Apply (Apenas o Artifact Registry)
+        working-directory: ./terraform
+        env:
+          TF_VAR_project_id: ${{ env.PROJECT_ID }}
+          TF_VAR_region: ${{ env.REGION }}
+          TF_VAR_infosiga_image: "dummy-image:latest"
+          TF_VAR_seade_idpm_image: "dummy-image:latest"
+          TF_VAR_seade_idpm_grupos_image: "dummy-image:latest"
+          TF_VAR_seade_mortalidade_image: "dummy-image:latest"
+          TF_VAR_seade_ipvs_entorno_image: "dummy-image:latest"
+        run: terraform apply -target=google_artifact_registry_repository.repo -auto-approve
+
+      # --- 4. BUILD & PUSH DAS 5 IMAGENS DOCKER ---
 
       - name: Build & Push InfoSiga
         run: |
