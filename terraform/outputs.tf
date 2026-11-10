@@ -2,10 +2,6 @@ output "infosiga_cloud_run_url" {
   value = google_cloud_run_v2_service.infosiga.uri
 }
 
-output "seade_cloud_run_url" {
-  value = google_cloud_run_v2_service.seade.uri
-}
-
 output "seade_idpm_url" {
   value = google_cloud_run_v2_service.seade_idpm.uri
 }
