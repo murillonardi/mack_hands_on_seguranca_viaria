@@ -1,1 +1,96 @@
-# 1. Build e Push da Imagem do InfoSiga [WIP]
+name: Deploy Data Pipelines (Cloud Run & Terraform)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: "project-f1079166-4703-4cc3-975"
+  REGION: "us-central1"
+  REPOSITORY: "data-pipelines-repo"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      # 1. Checkout do código-fonte
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Autenticação na Google Cloud via chave JSON armazenada nos Secrets do GitHub
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/38933711443/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'mack-github-actions-deploy@project-f1079166-4703-4cc3-975.iam.gserviceaccount.com'
+
+      # 3. Configurar autenticação do Docker para o Artifact Registry da GCP
+      - name: Configure Docker Client
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      # --- 4. BUILD & PUSH DAS 6 IMAGENS DOCKER ---
+
+      - name: Build & Push InfoSiga
+        run: |
+          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/infosiga-ingestion:${{ github.sha }}"
+          docker build -t $TAG ./services/infosiga
+          docker push $TAG
+          echo "INFOSIGA_IMAGE=$TAG" >> $GITHUB_ENV
+
+      - name: Build & Push SEADE IDPM
+        run: |
+          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-idpm-ingestion:${{ github.sha }}"
+          docker build -t $TAG ./services/seade_idpm
+          docker push $TAG
+          echo "SEADE_IDPM_IMAGE=$TAG" >> $GITHUB_ENV
+
+      - name: Build & Push SEADE IDPM Grupos
+        run: |
+          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-idpm-grupos-ingestion:${{ github.sha }}"
+          docker build -t $TAG ./services/seade_idpm_grupos
+          docker push $TAG
+          echo "SEADE_IDPM_GRUPOS_IMAGE=$TAG" >> $GITHUB_ENV
+
+      - name: Build & Push SEADE Mortalidade
+        run: |
+          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-mortalidade-ingestion:${{ github.sha }}"
+          docker build -t $TAG ./services/seade_mortalidade
+          docker push $TAG
+          echo "SEADE_MORTALIDADE_IMAGE=$TAG" >> $GITHUB_ENV
+
+      - name: Build & Push SEADE IPVS Entorno
+        run: |
+          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-ipvs-entorno-ingestion:${{ github.sha }}"
+          docker build -t $TAG ./services/seade_ipvs_entorno
+          docker push $TAG
+          echo "SEADE_IPVS_ENTORNO_IMAGE=$TAG" >> $GITHUB_ENV
+
+      # --- 5. INFRAESTRUTURA COM TERRAFORM ---
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.7"
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Terraform Apply (Implantando todos os serviços)
+        working-directory: ./terraform
+        env:
+          TF_VAR_project_id: ${{ env.PROJECT_ID }}
+          TF_VAR_region: ${{ env.REGION }}
+          TF_VAR_infosiga_image: ${{ env.INFOSIGA_IMAGE }}
+          TF_VAR_seade_idpm_image: ${{ env.SEADE_IDPM_IMAGE }}
+          TF_VAR_seade_idpm_grupos_image: ${{ env.SEADE_IDPM_GRUPOS_IMAGE }}
+          TF_VAR_seade_mortalidade_image: ${{ env.SEADE_MORTALIDADE_IMAGE }}
+          TF_VAR_seade_ipvs_entorno_image: ${{ env.SEADE_IPVS_ENTORNO_IMAGE }}
+        run: terraform apply -auto-approve
