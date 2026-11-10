@@ -16,6 +16,16 @@ provider "google" {
   region = var.region
 }
 
+import {
+  to = google_artifact_registry_repository.repo
+  id = "projects/project-f1079166-4703-4cc3-975/locations/us-central1/repositories/data-pipelines-repo"
+}
+
+import {
+  to = google_service_account.cloud_run_sa
+  id = "projects/project-f1079166-4703-4cc3-975/serviceAccounts/data-runner-sa@project-f1079166-4703-4cc3-975.iam.gserviceaccount.com"
+}
+
 locals {
   all_buckets = [
     "dados-infosiga-pessoas",
