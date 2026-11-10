@@ -33,6 +33,8 @@ CREATE OR REPLACE TABLE `project-f1079166-4703-4cc3-975.refined_data_bi.fct_acid
 AS
 SELECT distinct
   id_sinistro,
+  id_pessoa,
+  id_veiculo,
   tp_sinistro_primario,
   flg_atrop_pedestre,
   flg_atrop_vitima_fora_veic,
