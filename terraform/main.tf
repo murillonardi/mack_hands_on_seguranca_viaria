@@ -3,7 +3,6 @@ locals {
     "dados-infosiga-pessoas",
     "dados-infosiga-sinistros",
     "dados-infosiga-veiculos",
-    "dados-seade-ipvs",
     "dados_seade_idpm",
     "dados_seade_idpm_grupos",
     "dados-seade-mortalidade",
@@ -50,24 +49,7 @@ resource "google_cloud_run_v2_service" "infosiga" {
   }
 }
 
-# --- 4. CLOUD RUN: SEADE IPVS ---
-resource "google_cloud_run_v2_service" "seade" {
-  name     = "seade-ipvs-ingestion"
-  location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
-
-  template {
-    service_account = google_service_account.cloud_run_sa.email
-    scaling { max_instance_count = 1; min_instance_count = 0 }
-    containers {
-      image = var.seade_image
-      resources { limits = { memory = "1Gi", cpu = "1000m" } }
-      env { name = "BUCKET_NAME"; value = "dados-seade-ipvs" }
-    }
-  }
-}
-
-# --- 5. CLOUD RUN: SEADE IDPM ---
+# --- 4. CLOUD RUN: SEADE IDPM ---
 resource "google_cloud_run_v2_service" "seade_idpm" {
   name     = "seade-idpm-ingestion"
   location = var.region
@@ -84,7 +66,7 @@ resource "google_cloud_run_v2_service" "seade_idpm" {
   }
 }
 
-# --- 6. CLOUD RUN: SEADE IDPM GRUPOS ---
+# --- 5. CLOUD RUN: SEADE IDPM GRUPOS ---
 resource "google_cloud_run_v2_service" "seade_idpm_grupos" {
   name     = "seade-idpm-grupos-ingestion"
   location = var.region
@@ -101,7 +83,7 @@ resource "google_cloud_run_v2_service" "seade_idpm_grupos" {
   }
 }
 
-# --- 7. CLOUD RUN: SEADE MORTALIDADE ---
+# --- 6. CLOUD RUN: SEADE MORTALIDADE ---
 resource "google_cloud_run_v2_service" "seade_mortalidade" {
   name     = "seade-mortalidade-ingestion"
   location = var.region
@@ -118,7 +100,7 @@ resource "google_cloud_run_v2_service" "seade_mortalidade" {
   }
 }
 
-# --- 8. CLOUD RUN: SEADE IPVS ENTORNO ---
+# --- 7. CLOUD RUN: SEADE IPVS ENTORNO ---
 resource "google_cloud_run_v2_service" "seade_ipvs_entorno" {
   name     = "seade-ipvs-entorno-ingestion"
   location = var.region
