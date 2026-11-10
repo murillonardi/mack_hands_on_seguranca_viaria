@@ -26,6 +26,31 @@ import {
   id = "projects/project-f1079166-4703-4cc3-975/serviceAccounts/data-runner-sa@project-f1079166-4703-4cc3-975.iam.gserviceaccount.com"
 }
 
+import {
+  to = google_cloud_run_v2_service.infosiga
+  id = "projects/project-f1079166-4703-4cc3-975/locations/us-central1/services/infosiga-ingestion"
+}
+
+import {
+  to = google_cloud_run_v2_service.seade_idpm
+  id = "projects/project-f1079166-4703-4cc3-975/locations/us-central1/services/seade-idpm-ingestion"
+}
+
+import {
+  to = google_cloud_run_v2_service.seade_idpm_grupos
+  id = "projects/project-f1079166-4703-4cc3-975/locations/us-central1/services/seade-idpm-grupos-ingestion"
+}
+
+import {
+  to = google_cloud_run_v2_service.seade_mortalidade
+  id = "projects/project-f1079166-4703-4cc3-975/locations/us-central1/services/seade-mortalidade-ingestion"
+}
+
+import {
+  to = google_cloud_run_v2_service.seade_ipvs_entorno
+  id = "projects/project-f1079166-4703-4cc3-975/locations/us-central1/services/seade-ipvs-entorno-ingestion"
+}
+
 locals {
   all_buckets = [
     "dados-infosiga-pessoas",
