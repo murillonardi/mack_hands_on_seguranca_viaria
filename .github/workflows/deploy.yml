@@ -40,35 +40,35 @@ jobs:
       - name: Build & Push InfoSiga
         run: |
           TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/infosiga-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./services/infosiga
+          docker build -t $TAG ./cloudrun_services/infosiga
           docker push $TAG
           echo "INFOSIGA_IMAGE=$TAG" >> $GITHUB_ENV
 
       - name: Build & Push SEADE IDPM
         run: |
           TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-idpm-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./services/seade_idpm
+          docker build -t $TAG ./cloudrun_services/seade_idpm
           docker push $TAG
           echo "SEADE_IDPM_IMAGE=$TAG" >> $GITHUB_ENV
 
       - name: Build & Push SEADE IDPM Grupos
         run: |
           TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-idpm-grupos-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./services/seade_idpm_grupos
+          docker build -t $TAG ./cloudrun_services/seade_idpm_grupos
           docker push $TAG
           echo "SEADE_IDPM_GRUPOS_IMAGE=$TAG" >> $GITHUB_ENV
 
       - name: Build & Push SEADE Mortalidade
         run: |
           TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-mortalidade-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./services/seade_mortalidade
+          docker build -t $TAG ./cloudrun_services/seade_mortalidade
           docker push $TAG
           echo "SEADE_MORTALIDADE_IMAGE=$TAG" >> $GITHUB_ENV
 
       - name: Build & Push SEADE IPVS Entorno
         run: |
           TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-ipvs-entorno-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./services/seade_ipvs_entorno
+          docker build -t $TAG ./cloudrun_services/seade_ipvs_entorno
           docker push $TAG
           echo "SEADE_IPVS_ENTORNO_IMAGE=$TAG" >> $GITHUB_ENV
 
