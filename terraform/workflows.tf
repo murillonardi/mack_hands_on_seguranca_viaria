@@ -16,7 +16,7 @@ resource "google_cloud_run_v2_service_iam_member" "workflow_invoker" {
 
   location     = var.region
   project      = var.project_id
-  service      = each.value
+  name         = each.value
   role         = "roles/run.invoker"
   member       = "serviceAccount:${google_service_account.workflow_sa.email}"
 }
