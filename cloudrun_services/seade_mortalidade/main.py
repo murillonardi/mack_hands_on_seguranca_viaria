@@ -1,61 +1,32 @@
-import os
-import requests
-from flask import Flask, jsonify
-from google.cloud import storage
 from datetime import datetime
+import os
+from pathlib import Path
+from google.cloud import storage
 
-app = Flask(__name__)
+user_profile = os.environ.get("USERPROFILE", "C:\\Users\\Default")
+pasta_origem = (
+    Path(user_profile) / "AppData" / "Local" / "Temp" / "seade_dados"
+)
+current_date = datetime.now().strftime("%Y-%m-%d")
 
-SEADE_URL = "https://repositorio.seade.gov.br/dataset/ceb51484-b92f-4c06-a611-87abc493ce47/resource/a06203b9-6716-4685-9053-25e788571941/download/mortalidade_geral.csv"
-BUCKET_NAME = os.environ.get("BUCKET_NAME", "dados-seade-mortalidade")
-CURRENT_DATE = datetime.now().strftime("%Y%m%d")
-FILE_NAME = "seade_mortalidade_geral_{CURRENT_DATE}.csv"
+nome_arquivo = f"mortalidade_geral_{current_date}.csv"
+arquivo_path = pasta_origem / nome_arquivo
+bucket_destino = "dados-seade-mortalidade"
 
-@app.route("/", methods=["POST", "GET"])
-def run_pipeline():
-  storage_client = storage.Client()
-  print(f"Iniciando download do arquivo {FILE_NAME}...")
 
-  try:
-    response = requests.get(SEADE_URL, stream=True, timeout=300)
-    response.raise_for_status()
-  except requests.exceptions.RequestException as e:
-    return (
-        jsonify({
-            "status": "error",
-            "message": f"Falha ao baixar o arquivo: {str(e)}",
-        }),
-        500,
-    )
+def main():
+  if not arquivo_path.exists():
+    print(f"[ERRO] Arquivo não encontrado: {arquivo_path}")
+    return
 
-  try:
-    bucket = storage_client.bucket(BUCKET_NAME)
-    blob = bucket.blob(FILE_NAME)
+  print(f"🚀 Enviando {nome_arquivo} para o bucket {bucket_destino}...")
+  client = storage.Client()
+  bucket = client.bucket(bucket_destino)
+  blob = bucket.blob(nome_arquivo)
 
-    print(f"Enviando arquivo para o bucket GCS '{BUCKET_NAME}'...")
-    response.raw.decode_content = True
-    blob.upload_from_file(response.raw, content_type="text/csv")
-    print("Upload concluído com sucesso!")
-  except Exception as e:
-    return (
-        jsonify({
-            "status": "error",
-            "message": f"Falha no upload para o GCS: {str(e)}",
-        }),
-        500,
-    )
-
-  return (
-      jsonify({
-          "status": "success",
-          "message": f"Pipeline {FILE_NAME} executada com sucesso!",
-          "bucket": BUCKET_NAME,
-          "file": FILE_NAME,
-      }),
-      200,
-  )
+  blob.upload_from_filename(str(arquivo_path))
+  print(f"[OK] Upload concluído para gs://{bucket_destino}/{nome_arquivo}")
 
 
 if __name__ == "__main__":
-  port = int(os.environ.get("PORT", 8080))
-  app.run(host="0.0.0.0", port=port)
+  main()
