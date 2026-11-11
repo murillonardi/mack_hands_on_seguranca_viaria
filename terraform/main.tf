@@ -112,6 +112,7 @@ resource "google_cloud_run_v2_service" "seade_idpm" {
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
+    timeout = "900s"
     service_account = google_service_account.cloud_run_sa.email
     scaling {
       max_instance_count = 1
@@ -135,6 +136,7 @@ resource "google_cloud_run_v2_service" "seade_idpm_grupos" {
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
+    timeout = "900s"
     service_account = google_service_account.cloud_run_sa.email
     scaling {
       max_instance_count = 1
@@ -158,6 +160,7 @@ resource "google_cloud_run_v2_service" "seade_mortalidade" {
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
+    timeout = "900s"
     service_account = google_service_account.cloud_run_sa.email
     scaling {
       max_instance_count = 1
@@ -181,6 +184,7 @@ resource "google_cloud_run_v2_service" "seade_ipvs_entorno" {
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
+    timeout = "900s"
     service_account = google_service_account.cloud_run_sa.email
     scaling {
       max_instance_count = 1
