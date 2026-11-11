@@ -39,6 +39,7 @@ main:
           auth:
             type: OIDC
             audience: "${google_cloud_run_v2_service.infosiga.uri}"
+          timeout: 960
         result: infosiga_result
 
     - call_seade_idpm:
@@ -48,6 +49,7 @@ main:
           auth:
             type: OIDC
             audience: "${google_cloud_run_v2_service.seade_idpm.uri}"
+          timeout: 960
         result: seade_idpm_result
 
     - call_seade_idpm_grupos:
@@ -57,6 +59,7 @@ main:
           auth:
             type: OIDC
             audience: "${google_cloud_run_v2_service.seade_idpm_grupos.uri}"
+          timeout: 960
         result: seade_idpm_grupos_result
 
     - call_seade_mortalidade:
@@ -66,6 +69,7 @@ main:
           auth:
             type: OIDC
             audience: "${google_cloud_run_v2_service.seade_mortalidade.uri}"
+          timeout: 960
         result: seade_mortalidade_result
 
     - call_seade_ipvs_entorno:
@@ -75,6 +79,7 @@ main:
           auth:
             type: OIDC
             audience: "${google_cloud_run_v2_service.seade_ipvs_entorno.uri}"
+          timeout: 960
         result: seade_ipvs_entorno_result
 
     - finish:
