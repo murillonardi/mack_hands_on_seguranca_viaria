@@ -10,7 +10,13 @@ SEADE_URL = "https://repositorio.seade.gov.br/dataset/f714bdee-3f8c-464e-9e45-07
 BUCKET_NAME = os.environ.get("BUCKET_NAME", "dados_seade_idpm")
 CURRENT_DATE = datetime.now().strftime("%Y%m%d")
 FILE_NAME = f"seade_ipdm_{CURRENT_DATE}.csv"
-
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    )
+}
 
 @app.route("/", methods=["POST", "GET"])
 def run_pipeline():
@@ -18,7 +24,7 @@ def run_pipeline():
   print(f"Iniciando download do arquivo {FILE_NAME}...")
 
   try:
-    response = requests.get(SEADE_URL, stream=True, timeout=300)
+    response = requests.get(SEADE_URL, headers=HEADERS, timeout=300)
     response.raise_for_status()
   except requests.exceptions.RequestException as e:
     return (
