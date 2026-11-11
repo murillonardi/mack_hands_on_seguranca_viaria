@@ -1,91 +1,60 @@
+from datetime import datetime
 import os
-import tempfile
 import zipfile
-import requests
-from flask import Flask, jsonify
+from pathlib import Path
 from google.cloud import storage
 
-app = Flask(__name__)
+# Configuração de diretórios e data
+user_profile = os.environ.get("USERPROFILE", "C:\\Users\\Default")
+pasta_origem = (
+    Path(user_profile) / "AppData" / "Local" / "Temp" / "seade_dados"
+)
+current_date = datetime.now().strftime("%Y-%m-%d")
 
-INFOSIGA_URL = "https://infosiga.detran.sp.gov.br/painel/download/file/dados_infosiga.zip"
+zip_filename = f"dados_infosiga_{current_date}.zip"
+zip_path = pasta_origem / zip_filename
 
-# Mapeamento de prefixo para o bucket correspondente
-BUCKET_MAP = {
+# Mapeamento de prefixos para seus respectivos buckets
+BUCKETS = {
     "pessoas_": "dados-infosiga-pessoas",
     "sinistros_": "dados-infosiga-sinistros",
     "veiculos_": "dados-infosiga-veiculos",
 }
 
 
-@app.route("/", methods=["POST", "GET"])
-def run_pipeline():
-  storage_client = storage.Client()
+def upload_to_gcs(file_path, bucket_name, blob_name):
+  client = storage.Client()
+  bucket = client.bucket(bucket_name)
+  blob = bucket.blob(blob_name)
+  blob.upload_from_filename(str(file_path))
+  print(f"[OK] Enviado {file_path.name} para gs://{bucket_name}/{blob_name}")
 
-  print("Iniciando download do arquivo ZIP do InfoSiga...")
-  try:
-    response = requests.get(INFOSIGA_URL, stream=True, timeout=300)
-    response.raise_for_status()
-  except requests.exceptions.RequestException as e:
-    return (
-        jsonify({
-            "status": "error",
-            "message": f"Falha ao baixar o arquivo: {str(e)}",
-        }),
-        500,
-    )
 
-  uploaded_files = []
+def main():
+  if not zip_path.exists():
+    print(f"[ERRO] Arquivo ZIP não encontrado em: {zip_path}")
+    return
 
-  # Utiliza um diretório temporário para extração segura
-  with tempfile.TemporaryDirectory() as tmpdir:
-    zip_path = os.path.join(tmpdir, "dados_infosiga.zip")
+  print(f"📂 Descompactando {zip_filename}...")
+  extract_dir = pasta_origem / "extracted_infosiga"
+  extract_dir.mkdir(exist_ok=True)
 
-    # Escreve o arquivo zip em chunks
-    with open(zip_path, "wb") as f:
-      for chunk in response.iter_content(chunk_size=8192):
-        if chunk:
-          f.write(chunk)
+  with zipfile.ZipFile(zip_path, "r") as zip_ref:
+    zip_ref.extractall(extract_dir)
 
-    print("Download concluído. Extraindo arquivos...")
-    with zipfile.ZipFile(zip_path, "r") as zip_ref:
-      zip_ref.extractall(tmpdir)
+  print("🚀 Iniciando upload dos arquivos CSV para o GCS...")
+  # Percorre recursivamente os arquivos extraídos
+  for file_path in extract_dir.rglob("*"):
+    if file_path.is_file():
+      filename = file_path.name
+      for prefix, bucket_name in BUCKETS.items():
+        if filename.startswith(prefix):
+          p = Path(filename)
+          blob_name = f"{p.stem}_{current_date}{p.suffix}"
+          upload_to_gcs(file_path, bucket_name, blob_name)
 
-      for filename in zip_ref.namelist():
-        # Ignora diretórios internos caso existam
-        if filename.endswith("/"):
-          continue
-
-        base_name = os.path.basename(filename)
-        target_bucket = None
-
-        # Identifica o bucket de destino com base no prefixo
-        for prefix, bucket_name in BUCKET_MAP.items():
-          if base_name.startswith(prefix):
-            target_bucket = bucket_name
-            break
-
-        if target_bucket:
-          file_path = os.path.join(tmpdir, filename)
-          if os.path.isfile(file_path):
-            print(f"Enviando '{base_name}' para o bucket '{target_bucket}'...")
-            bucket = storage_client.bucket(target_bucket)
-            blob = bucket.blob(base_name)
-            blob.upload_from_filename(file_path)
-
-            uploaded_files.append({"file": base_name, "bucket": target_bucket})
-
-  return (
-      jsonify({
-          "status": "success",
-          "message": (
-              "Pipeline de ingestão InfoSiga executada com sucesso!"
-          ),
-          "files_uploaded": uploaded_files,
-      }),
-      200,
-  )
+  print("Processo do Infosiga concluído com sucesso!")
 
 
 if __name__ == "__main__":
-  port = int(os.environ.get("PORT", 8080))
-  app.run(host="0.0.0.0", port=port)
+  main()
