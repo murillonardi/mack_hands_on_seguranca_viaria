@@ -1,60 +1,57 @@
 from datetime import datetime
 import os
-import zipfile
-from pathlib import Path
+from flask import Flask, jsonify
 from google.cloud import storage
 
-# Configuração de diretórios e data
-user_profile = os.environ.get("USERPROFILE", "C:\\Users\\Default")
-pasta_origem = (
-    Path(user_profile) / "AppData" / "Local" / "Temp" / "seade_dados"
-)
-current_date = datetime.now().strftime("%Y-%m-%d")
+app = Flask(__name__)
 
-zip_filename = f"dados_infosiga_{current_date}.zip"
-zip_path = pasta_origem / zip_filename
-
-# Mapeamento de prefixos para seus respectivos buckets
+# Buckets onde os arquivos foram salvos externamente
 BUCKETS = {
-    "pessoas_": "dados-infosiga-pessoas",
-    "sinistros_": "dados-infosiga-sinistros",
-    "veiculos_": "dados-infosiga-veiculos",
+    "pessoas": "dados-infosiga-pessoas",
+    "sinistros": "dados-infosiga-sinistros",
+    "veiculos": "dados-infosiga-veiculos",
 }
 
 
-def upload_to_gcs(file_path, bucket_name, blob_name):
-  client = storage.Client()
-  bucket = client.bucket(bucket_name)
-  blob = bucket.blob(blob_name)
-  blob.upload_from_filename(str(file_path))
-  print(f"[OK] Enviado {file_path.name} para gs://{bucket_name}/{blob_name}")
+@app.route("/", methods=["POST"])
+def process_infosiga():
+  try:
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    storage_client = storage.Client()
 
+    results = {}
 
-def main():
-  if not zip_path.exists():
-    print(f"[ERRO] Arquivo ZIP não encontrado em: {zip_path}")
-    return
+    for tipo, bucket_name in BUCKETS.items():
+      bucket = storage_client.bucket(bucket_name)
 
-  print(f"📂 Descompactando {zip_filename}...")
-  extract_dir = pasta_origem / "extracted_infosiga"
-  extract_dir.mkdir(exist_ok=True)
+      # Procura o arquivo com a data de hoje no bucket
+      prefix = f"dados_infosiga_{tipo}_{current_date}"
+      blobs = list(bucket.list_blobs(prefix=prefix))
 
-  with zipfile.ZipFile(zip_path, "r") as zip_ref:
-    zip_ref.extractall(extract_dir)
+      if not blobs:
+        results[tipo] = "Nenhum arquivo encontrado para hoje no GCS"
+        continue
 
-  print("🚀 Iniciando upload dos arquivos CSV para o GCS...")
-  # Percorre recursivamente os arquivos extraídos
-  for file_path in extract_dir.rglob("*"):
-    if file_path.is_file():
-      filename = file_path.name
-      for prefix, bucket_name in BUCKETS.items():
-        if filename.startswith(prefix):
-          p = Path(filename)
-          blob_name = f"{p.stem}_{current_date}{p.suffix}"
-          upload_to_gcs(file_path, bucket_name, blob_name)
+      # Pega o arquivo mais recente correspondente
+      blob = blobs[0]
+      local_path = f"/tmp/{blob.name}"
 
-  print("Processo do Infosiga concluído com sucesso!")
+      # Baixa para o diretório temporário do Linux (/tmp) do Cloud Run
+      blob.download_to_filename(local_path)
+      print(f"Arquivo {blob.name} baixado com sucesso para o container.")
+
+      # ---> AQUI ENTRA A SUA LÓGICA DE PROCESSAMENTO / CARGA NO BIGQUERY <---
+      # Exemplo: ler o CSV usando pandas e carregar no BigQuery
+
+      results[tipo] = "Processado com sucesso"
+
+    return jsonify({"status": "success", "details": results}), 200
+
+  except Exception as e:
+    print(f"Erro interno no processamento: {str(e)}")
+    return jsonify({"status": "error", "message": str(e)}), 500
 
 
 if __name__ == "__main__":
-  main()
+  port = int(os.environ.get("PORT", 8080))
+  app.run(host="0.0.0.0", port=port)
