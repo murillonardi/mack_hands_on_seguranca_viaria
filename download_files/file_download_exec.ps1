@@ -16,7 +16,6 @@ Write-Host "📅 Data de referência: $dataAtual`n" -ForegroundColor Cyan
 # ==========================================
 # 1. VERIFICAÇÃO E INSTALAÇÃO AUTOMÁTICA DO GCLOUD
 # ==========================================
-# Verifica se o gcloud está globalmente no sistema ou na pasta do usuário
 $gcloudGlobal = Get-Command gcloud -ErrorAction SilentlyContinue
 
 if ($null -ne $gcloudGlobal) {
@@ -35,7 +34,6 @@ if ($null -ne $gcloudGlobal) {
     $zipPath = Join-Path $pastaDestino "google-cloud-sdk.zip"
     $sdkDir = Join-Path $userProfile "google-cloud-sdk"
 
-    # Baixa o SDK oficial do Google
     Write-Host "Baixando SDK..." -NoNewline
     try {
         Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -TimeoutSec 600
@@ -45,23 +43,18 @@ if ($null -ne $gcloudGlobal) {
         exit 1
     }
 
-    # Extrai o arquivo ZIP
     Write-Host "Extraindo arquivos..." -NoNewline
     if (Test-Path $sdkDir) { Remove-Item -Recurse -Force $sdkDir }
     Expand-Archive -Path $zipPath -DestinationPath $sdkDir -Force
     Write-Host " [OK]" -ForegroundColor Green
 
-    # Executa o instalador interno do SDK em modo silencioso
-    Write-Host "Configurando ambiente..." -NoNewline
     $installBat = Join-Path $sdkDir "google-cloud-sdk\install.bat"
     & $installBat --quiet --path-update false --usage-reporting false | Out-Null
     Write-Host " [OK]" -ForegroundColor Green
 
-    # Define os caminhos absolutos para uso imediato
     $gcloudCommand = $gcloudExe
     $gsutilCommand = $gsutilExe
 
-    # Remove o instalador zip temporário
     Remove-Item -Force $zipPath
     Write-Host "✨ Google Cloud SDK instalado com sucesso!`n" -ForegroundColor Green
 }
@@ -81,10 +74,14 @@ if ([string]::IsNullOrWhiteSpace($authCheck) -or $authCheck -like "*No credentia
     Write-Host "✅ Sessão do Google Cloud autenticada com sucesso.`n" -ForegroundColor Green
 }
 
+$headers = @{
+    "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+}
+
 # ==========================================
-# 3. LISTA DE FONTES E EXECUÇÃO DO PIPELINE
+# 3. DOWNLOAD E UPLOAD DOS ARQUIVOS SEADE (CSV DIRETOS)
 # ==========================================
-$fontes = @(
+$fontesSeade = @(
     @{
         Url = "https://repositorio.seade.gov.br/dataset/f714bdee-3f8c-464e-9e45-07a0e444937a/resource/5684399c-2175-4749-8914-babd5c9eaaef/download/ipdm.csv"
         NomeBase = "ipdm"
@@ -111,19 +108,14 @@ $fontes = @(
     }
 )
 
-$headers = @{
-    "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-}
-
-foreach ($item in $fontes) {
+foreach ($item in $fontesSeade) {
     $nomeArquivo = "$($item.NomeBase)_$dataAtual$($item.Ext)"
     $caminhoLocal = Join-Path $pastaDestino $nomeArquivo
     $destinoGcs = "gs://$($item.Bucket)/$nomeArquivo"
 
     Write-Host "--------------------------------------------------"
-    Write-Host "Processando: $($item.NomeBase)" -ForegroundColor Yellow
+    Write-Host "Processando SEADE: $($item.NomeBase)" -ForegroundColor Yellow
 
-    # Download da internet para a máquina local
     Write-Host "Baixando da internet..." -NoNewline
     try {
         Invoke-WebRequest -Uri $item.Url -OutFile $caminhoLocal -Headers $headers -TimeoutSec 300
@@ -133,7 +125,6 @@ foreach ($item in $fontes) {
         continue
     }
 
-    # Upload para o GCS usando o gsutil apontado corretamente
     Write-Host "Enviando para $destinoGcs..." -NoNewline
     try {
         & $gsutilCommand cp $caminhoLocal $destinoGcs | Out-Null
@@ -143,4 +134,75 @@ foreach ($item in $fontes) {
     }
 }
 
-Write-Host "`n✨ Sincronização completa realizada com sucesso!" -ForegroundColor Cyan
+# ==========================================
+# 4. DOWNLOAD, EXTRAÇÃO E ROTEAMENTO DO INFOSIGA (ZIP VIA CURL)
+# ==========================================
+Write-Host "--------------------------------------------------"
+Write-Host "Processando Infosiga (Pacote ZIP)" -ForegroundColor Yellow
+
+$infosigaZipUrl = "https://infosiga.detran.sp.gov.br/painel/download/file/dados_infosiga.zip"
+$zipFilePath = Join-Path $pastaDestino "dados_infosiga.zip"
+$extractPath = Join-Path $pastaDestino "infosiga_extracted"
+
+Write-Host "Baixando ZIP do Infosiga via curl..." -NoNewline
+try {
+    # O parâmetro -L segue redirecionamentos e o -A simula um navegador real para passar pelo WAF do portal
+    & curl.exe -L -s -S -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" -o "$zipFilePath" "$infosigaZipUrl"
+    Write-Host " [OK]" -ForegroundColor Green
+} catch {
+    Write-Host " [ERRO NO DOWNLOAD DO ZIP]: $_" -ForegroundColor Red
+}
+
+if (Test-Path $zipFilePath) {
+    $fileInfo = Get-Item $zipFilePath
+    
+    # Valida se o arquivo baixado tem um tamanho plausível (maior que 100KB)
+    if ($fileInfo.Length -lt 102400) {
+        Write-Host " [ERRO] O arquivo baixado é muito pequeno ($($fileInfo.Length) bytes). O portal bloqueou a requisição automatizada." -ForegroundColor Red
+        Remove-Item -Force $zipFilePath
+    } else {
+        Write-Host "Extraindo arquivos ZIP..." -NoNewline
+        if (Test-Path $extractPath) { Remove-Item -Recurse -Force $extractPath }
+        
+        try {
+            Expand-Archive -Path $zipFilePath -DestinationPath $extractPath -Force
+            Write-Host " [OK]" -ForegroundColor Green
+
+            # Varre os CSVs e faz o upload para o bucket correto
+            $csvFiles = Get-ChildItem -Path $extractPath -Filter "*.csv" -Recurse
+            foreach ($csv in $csvFiles) {
+                $fileName = $csv.Name
+                $filePath = $csv.FullName
+                $targetBucket = $null
+
+                if ($fileName.StartsWith("pessoas_")) {
+                    $targetBucket = "dados-infosiga-pessoas"
+                } elseif ($fileName.StartsWith("sinistros_")) {
+                    $targetBucket = "dados-infosiga-sinistros"
+                } elseif ($fileName.StartsWith("veiculos_")) {
+                    $targetBucket = "dados-infosiga-veiculos"
+                }
+
+                if ($null -ne $targetBucket) {
+                    $destinoGcs = "gs://$targetBucket/$fileName"
+                    Write-Host "Enviando $fileName para $targetBucket..." -NoNewline
+                    try {
+                        & $gsutilCommand cp $filePath $destinoGcs | Out-Null
+                        Write-Host " [OK]" -ForegroundColor Green
+                    } catch {
+                        Write-Host " [ERRO NO UPLOAD]: $_" -ForegroundColor Red
+                    }
+                } else {
+                    Write-Host "ℹ️ Arquivo CSV ignorado (fora dos prefixos mapeados): $fileName" -ForegroundColor Gray
+                }
+            }
+        } catch {
+            Write-Host " [ERRO NA EXTRAÇÃO]: $_" -ForegroundColor Red
+        }
+
+        # Remove o arquivo ZIP temporário
+        Remove-Item -Force $zipFilePath -ErrorAction SilentlyContinue
+    }
+}
+
+Write-Host "`n✨ Sincronização completa de todas as fontes realizada com sucesso!" -ForegroundColor Cyan
