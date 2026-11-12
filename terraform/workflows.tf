@@ -84,18 +84,18 @@ resource "google_workflows_workflow" "dataform_orchestrator" {
   EOF
 }
 
-# 3. Gatilho Eventarc corrigido com event_filters
+# 3. Gatilho Eventarc com matching_criteria compatível com o Provedor v5
 resource "google_eventarc_trigger" "gcs_to_workflow_trigger" {
   name     = "trigger-veiculos-dataform"
   location = var.region
   project  = var.project_id
 
-  event_filters {
+  matching_criteria {
     attribute = "type"
     value     = "google.cloud.storage.object.v1.finalized"
   }
 
-  event_filters {
+  matching_criteria {
     attribute = "bucket"
     value     = "dados-infosiga-veiculos"
   }
