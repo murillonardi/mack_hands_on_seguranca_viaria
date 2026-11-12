@@ -34,7 +34,6 @@ resource "google_workflows_workflow" "dataform_orchestrator" {
             call: sys.log
             args:
                 text: '$${("Evento GCS recebido para o arquivo: " + event.data.name)}'
-                level: INFO
 
         - filtrar_arquivo:
             switch:
