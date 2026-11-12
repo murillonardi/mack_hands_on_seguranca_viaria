@@ -19,6 +19,20 @@ resource "google_service_account" "eventarc_sa" {
   display_name = "Service Account para o Eventarc disparar o Workflow"
 }
 
+# Concede a permissão necessária para o Eventarc receber e disparar os eventos
+resource "google_project_iam_member" "eventarc_receiver" {
+  project = var.project_id
+  role    = "roles/eventarc.eventReceiver"
+  member  = "serviceAccount:${google_service_account.eventarc_sa.email}"
+}
+
+# Concede permissão para a Service Account do Eventarc atuar como criadora de tokens / invocadora do workflow
+resource "google_project_iam_member" "eventarc_workflow_invoker" {
+  project = var.project_id
+  role    = "roles/workflows.invoker"
+  member  = "serviceAccount:${google_service_account.eventarc_sa.email}"
+}
+
 # 2. Definição do Cloud Workflow (Orquestra Cloud Run + Dataform)
 resource "google_workflows_workflow" "dataform_orchestrator" {
   name            = "dataform-veiculos-orchestrator"
@@ -84,7 +98,7 @@ resource "google_workflows_workflow" "dataform_orchestrator" {
   EOF
 }
 
-# 3. Gatilho Eventarc com matching_criteria compatível com o Provedor v5
+# 3. Gatilho Eventarc com as dependências de IAM corretas
 resource "google_eventarc_trigger" "gcs_to_workflow_trigger" {
   name     = "trigger-veiculos-dataform"
   location = var.region
@@ -105,4 +119,9 @@ resource "google_eventarc_trigger" "gcs_to_workflow_trigger" {
   }
 
   service_account = google_service_account.eventarc_sa.email
+
+  depends_on = [
+    google_project_iam_member.eventarc_receiver,
+    google_project_iam_member.eventarc_workflow_invoker
+  ]
 }
