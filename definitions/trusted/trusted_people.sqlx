@@ -1,6 +1,14 @@
-CREATE OR REPLACE TABLE `project-f1079166-4703-4cc3-975.trusted_data.trusted_people` 
-PARTITION BY DATE_TRUNC(data_sinistro, MONTH)
-AS
+config {
+    type: 'table',
+    database: 'project-f1079166-4703-4cc3-975',
+    schema: 'trusted_data',
+    tags: ['full_data_pipeline','trusted'],
+    dependencies: [],
+    bigquery: {
+        partitionBy: 'DATE_TRUNC(data_sinistro, MONTH)'
+    }
+}
+
 SELECT
     id_sinistro,
     id_pessoa,
@@ -118,4 +126,4 @@ SELECT
 
     tempo_sinistro_obito AS dias_para_obito
 
-FROM `project-f1079166-4703-4cc3-975.raw_data.raw_people`;
+FROM `project-f1079166-4703-4cc3-975.raw_data.raw_people`
