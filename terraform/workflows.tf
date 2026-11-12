@@ -84,18 +84,18 @@ resource "google_workflows_workflow" "dataform_orchestrator" {
   EOF
 }
 
-# 3. Gatilho Eventarc escutando finalizações no bucket de veículos
+# 3. Gatilho Eventarc corrigido com event_filters
 resource "google_eventarc_trigger" "gcs_to_workflow_trigger" {
   name     = "trigger-veiculos-dataform"
   location = var.region
   project  = var.project_id
 
-  matching_criteria {
-    attribute = "type.googleapis.com"
+  event_filters {
+    attribute = "type"
     value     = "google.cloud.storage.object.v1.finalized"
   }
 
-  matching_criteria {
+  event_filters {
     attribute = "bucket"
     value     = "dados-infosiga-veiculos"
   }
