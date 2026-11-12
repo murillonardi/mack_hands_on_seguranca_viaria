@@ -1,6 +1,14 @@
-CREATE OR REPLACE TABLE `project-f1079166-4703-4cc3-975.trusted_data.trusted_accidents`
-PARTITION BY DATE_TRUNC(data_sinistro, MONTH)
-AS
+config {
+    type: 'table',
+    database: 'project-f1079166-4703-4cc3-975',
+    schema: 'trusted_data',
+    tags: ['full_data_pipeline','trusted'],
+    dependencies: [],
+    bigquery: {
+        partitionBy: 'DATE_TRUNC(data_sinistro, MONTH)'
+    }
+}
+
 SELECT
     id_sinistro,
     
@@ -67,4 +75,4 @@ SELECT
     IF(UPPER(TRIM(tp_sinistro_outros)) = 'S', TRUE, FALSE) AS flg_outros,
     IF(UPPER(TRIM(tp_sinistro_nao_disponivel)) = 'S', TRUE, FALSE) AS flg_nao_disponivel
 
-FROM `project-f1079166-4703-4cc3-975.raw_data.raw_accidents`;
+FROM `project-f1079166-4703-4cc3-975.raw_data.raw_accidents`

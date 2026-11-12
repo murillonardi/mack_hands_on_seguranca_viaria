@@ -1,6 +1,14 @@
-CREATE OR REPLACE TABLE `project-f1079166-4703-4cc3-975.trusted_data.trusted_vehicles`
-PARTITION BY DATE_TRUNC(data_sinistro, MONTH)
-AS
+config {
+    type: 'table',
+    database: 'project-f1079166-4703-4cc3-975',
+    schema: 'trusted_data',
+    tags: ['full_data_pipeline','trusted'],
+    dependencies: [],
+    bigquery: {
+        partitionBy: 'DATE_TRUNC(data_sinistro, MONTH)'
+    }
+}
+
 SELECT
     id_sinistro,
     id_veiculo,
@@ -57,4 +65,4 @@ SELECT
     -- Campos temporais padronizados
     data_sinistro, -- remocacao de campos redundantes: ano_sinistro, mes_sinistro, ano_mes_sinistro
 
-FROM `project-f1079166-4703-4cc3-975.raw_data.raw_vehicles`;
+FROM `project-f1079166-4703-4cc3-975.raw_data.raw_vehicles`
