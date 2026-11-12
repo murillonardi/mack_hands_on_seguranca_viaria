@@ -40,7 +40,7 @@ resource "google_workflows_workflow" "dataform_orchestrator" {
             switch:
                 - condition: '$${event.data.name == "veiculos_2025-2026.csv"}'
                   next: chamar_cloud_run_ingestao
-            other:
+            otherwise:
                 next: arquivo_ignorado
 
         - chamar_cloud_run_ingestao:
