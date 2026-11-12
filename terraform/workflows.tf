@@ -19,15 +19,6 @@ resource "google_service_account" "eventarc_sa" {
   display_name = "Service Account para o Eventarc disparar o Workflow"
 }
 
-# Concede permissão para o Eventarc invocar o Workflow (limitado ao próprio workflow para evitar erro 403 de projeto)
-resource "google_workflows_workflow_iam_member" "eventarc_workflow_invoker" {
-  region     = var.region
-  project    = var.project_id
-  workflow   = google_workflows_workflow.dataform_orchestrator.name
-  role       = "roles/workflows.invoker"
-  member     = "serviceAccount:${google_service_account.eventarc_sa.email}"
-}
-
 # 2. Definição do Cloud Workflow (Orquestra Cloud Run + Dataform)
 resource "google_workflows_workflow" "dataform_orchestrator" {
   name            = "dataform-veiculos-orchestrator"
