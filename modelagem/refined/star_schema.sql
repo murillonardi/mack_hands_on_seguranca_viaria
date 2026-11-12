@@ -1,6 +1,7 @@
 CREATE OR REPLACE TABLE `project-f1079166-4703-4cc3-975.refined_data_bi.dim_tempo`
 AS
-SELECT
+SELECT distinct
+  id_sinistro,
   data_sinistro,
   dia_da_semana,
   turno
@@ -13,7 +14,7 @@ WHERE
 CREATE OR REPLACE TABLE `project-f1079166-4703-4cc3-975.refined_data_bi.dim_localizacao` 
 AS
 SELECT distinct
-  GENERATE_UUID() AS sk_localizacao,
+  id_sinistro,
   cod_ibge,
   municipio,
   regiao_administrativa,
@@ -67,8 +68,8 @@ CREATE OR REPLACE TABLE `project-f1079166-4703-4cc3-975.refined_data_bi.dim_pess
 AS
 SELECT DISTINCT
   id_pessoa,
+  id_sinistro,
   tipo_de_pessoa,
-  tipo_veiculo_pessoa,
   sexo,
   idade,
   faixa_etaria_demografica,
@@ -83,6 +84,7 @@ CREATE OR REPLACE TABLE `project-f1079166-4703-4cc3-975.refined_data_bi.dim_veic
 AS
 SELECT DISTINCT
   id_veiculo,
+  id_sinistro,
   marca_modelo,
   ano_fab,
   ano_modelo,
