@@ -46,12 +46,12 @@ resource "google_workflows_workflow" "dataform_orchestrator" {
         - log_chegada:
             call: sys.log
             args:
-                text: ${ "Evento GCS recebido para o arquivo: " + event.data.name }
+                text: $${ "Evento GCS recebido para o arquivo: " + event.data.name }
                 level: INFO
 
         - filtrar_arquivo:
             switch:
-                - condition: ${ event.data.name == "veiculos_2025-2026.csv" }
+                - condition: $${ event.data.name == "veiculos_2025-2026.csv" }
                   next: chamar_cloud_run_ingestao
             other:
                 next: arquivo_ignorado
@@ -69,7 +69,7 @@ resource "google_workflows_workflow" "dataform_orchestrator" {
         - criar_compilation_result:
             call: http.post
             args:
-                url: https://dataform.googleapis.com/v1beta1/projects/${var.project_id}/locations/${var.region}/repositories/dataform-pipeline/compilationResults
+                url: https://dataform.googleapis.com/v1beta1/projects/${var.project_id}/locations/${var.region}/repositories/SEU_REPOSITORIO/compilationResults
                 auth:
                     type: OAuth2
                 body:
@@ -79,7 +79,7 @@ resource "google_workflows_workflow" "dataform_orchestrator" {
         - disparar_workflow_invocation:
             call: http.post
             args:
-                url: https://dataform.googleapis.com/v1beta1/projects/${var.project_id}/locations/${var.region}/repositories/dataform-pipeline/workflowInvocations
+                url: https://dataform.googleapis.com/v1beta1/projects/${var.project_id}/locations/${var.region}/repositories/SEU_REPOSITORIO/workflowInvocations
                 auth:
                     type: OAuth2
                 body:
@@ -91,10 +91,10 @@ resource "google_workflows_workflow" "dataform_orchestrator" {
             result: invocation_resp
 
         - sucesso:
-            return: ${ "Pipeline executado com sucesso para o arquivo: " + event.data.name }
+            return: $${ "Pipeline executado com sucesso para o arquivo: " + event.data.name }
 
         - arquivo_ignorado:
-            return: ${ "Arquivo ignorado pelas regras do pipeline: " + event.data.name }
+            return: $${ "Arquivo ignorado pelas regras do pipeline: " + event.data.name }
   EOF
 }
 
