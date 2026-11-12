@@ -33,41 +33,13 @@ jobs:
       - name: Configure Docker Client
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      # --- 2. BUILD & PUSH DAS 6 IMAGENS DOCKER ---
-      - name: Build & Push InfoSiga
+      # --- 2. BUILD & PUSH DA IMAGEM DO CLOUD RUN ÚNICO ---
+      - name: Build & Push Raw Data Create
         run: |
-          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/infosiga-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./cloudrun_services/infosiga
+          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/raw-data-create:${{ github.sha }}"
+          docker build -t $TAG ./cloudrun_services/raw_data_create
           docker push $TAG
-          echo "INFOSIGA_IMAGE=$TAG" >> $GITHUB_ENV
-
-      - name: Build & Push SEADE IDPM
-        run: |
-          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-idpm-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./cloudrun_services/seade_idpm
-          docker push $TAG
-          echo "SEADE_IDPM_IMAGE=$TAG" >> $GITHUB_ENV
-
-      - name: Build & Push SEADE IDPM Grupos
-        run: |
-          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-idpm-grupos-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./cloudrun_services/seade_idpm_grupos
-          docker push $TAG
-          echo "SEADE_IDPM_GRUPOS_IMAGE=$TAG" >> $GITHUB_ENV
-
-      - name: Build & Push SEADE Mortalidade
-        run: |
-          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-mortalidade-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./cloudrun_services/seade_mortalidade
-          docker push $TAG
-          echo "SEADE_MORTALIDADE_IMAGE=$TAG" >> $GITHUB_ENV
-
-      - name: Build & Push SEADE IPVS Entorno
-        run: |
-          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-ipvs-entorno-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./cloudrun_services/seade_ipvs_entorno
-          docker push $TAG
-          echo "SEADE_IPVS_ENTORNO_IMAGE=$TAG" >> $GITHUB_ENV
+          echo "RAW_DATA_IMAGE=$TAG" >> $GITHUB_ENV
 
       # --- 3. INFRAESTRUTURA COMPLETA COM TERRAFORM ---
       - name: Setup Terraform
@@ -84,10 +56,5 @@ jobs:
         env:
           TF_VAR_project_id: ${{ env.PROJECT_ID }}
           TF_VAR_region: ${{ env.REGION }}
-          TF_VAR_infosiga_image: ${{ env.INFOSIGA_IMAGE }}
-          TF_VAR_seade_image: ${{ env.SEADE_IPVS_IMAGE }}
-          TF_VAR_seade_idpm_image: ${{ env.SEADE_IDPM_IMAGE }}
-          TF_VAR_seade_idpm_grupos_image: ${{ env.SEADE_IDPM_GRUPOS_IMAGE }}
-          TF_VAR_seade_mortalidade_image: ${{ env.SEADE_MORTALIDADE_IMAGE }}
-          TF_VAR_seade_ipvs_entorno_image: ${{ env.SEADE_IPVS_ENTORNO_IMAGE }}
+          TF_VAR_raw_data_image: ${{ env.RAW_DATA_IMAGE }}
         run: terraform apply -auto-approve

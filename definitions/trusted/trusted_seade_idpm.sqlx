@@ -1,6 +1,14 @@
-CREATE OR REPLACE TABLE `project-f1079166-4703-4cc3-975.trusted_data.trusted_seade_ipdm`
-PARTITION BY data_ano_referencia
-AS
+config {
+    type: 'table',
+    database: 'project-f1079166-4703-4cc3-975',
+    schema: 'trusted_data',
+    tags: ['full_data_pipeline','trusted'],
+    dependencies: [],
+    bigquery: {
+        partitionBy: 'data_ano_referencia'
+    }
+}
+
 SELECT
     cod_ibge,
     UPPER(TRIM(Municipio)) AS municipio,

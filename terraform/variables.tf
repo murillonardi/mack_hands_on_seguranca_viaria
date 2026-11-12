@@ -9,23 +9,3 @@ variable "region" {
   description = "Região padrão"
   default     = "us-central1"
 }
-
-variable "infosiga_image" {
-  type = string
-}
-
-variable "seade_idpm_image" {
-  type = string
-}
-
-variable "seade_idpm_grupos_image" {
-  type = string
-}
-
-variable "seade_mortalidade_image" {
-  type = string
-}
-
-variable "seade_ipvs_entorno_image" {
-  type = string
-}
