@@ -10,7 +10,7 @@ variable "region" {
   default = "us-central1"
 }
 
-variable "dashboard-image" {
+variable "dashboard_image" {
   type = string
   description = "Imagem do dashboard"
 }
