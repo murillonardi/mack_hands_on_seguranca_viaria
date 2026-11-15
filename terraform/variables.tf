@@ -9,3 +9,8 @@ variable "region" {
   description = "Região padrão"
   default = "us-central1"
 }
+
+variable "dashboard-image" {
+  type = string
+  description = "Imagem do dashboard"
+}
