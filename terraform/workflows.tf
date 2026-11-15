@@ -125,44 +125,5 @@ resource "google_eventarc_trigger" "gcs_to_workflow_trigger" {
     google_project_iam_member.eventarc_workflow_invoker
   ]
 }
-
-# Recurso do Cloud Run para o Dashboard Streamlit
-resource "google_cloud_run_v2_service" "dashboard" {
-  name     = "dashboard"
-  location = var.region
-  project  = var.project_id
-  ingress  = "INGRESS_TRAFFIC_ALL" # Permite acesso público externo
-
-  template {
-    containers {
-      image = var.dashboard-image # Variável contendo a tag da imagem do Artifact Registry
-      
-      resources {
-        limits = {
-          cpu    = "1"
-          memory = "2Gi" # Streamlit consome um pouco mais de memória devido ao Pandas
-        }
-      }
-
-      # Se o seu app precisar ler variáveis de ambiente ou secrets, configure aqui:
-      # env {
-      #   name  = "PROJETO_ID"
-      #   value = var.project_id
-      # }
-    }
-  }
-}
-
-# Concede permissão pública (unauthenticated) para qualquer pessoa acessar o Dashboard
-resource "google_cloud_run_v2_service_iam_member" "streamlit_public_invoker" {
-  location = var.region
-  project  = var.project_id
-  name     = google_cloud_run_v2_service.dashboard.name
-  role     = "roles/run.invoker"
-  member   = "allUsers"
-}
-
-# Output para exibir a URL pública do Dashboard após o deploy
-output "dashboard_url" {
   value = google_cloud_run_v2_service.dashboard.uri
 }
