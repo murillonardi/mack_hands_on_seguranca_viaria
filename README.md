@@ -9,7 +9,9 @@ A arquitetura é totalmente serverless e nativa da **Google Cloud Platform (GCP)
 
 ![Arquitetura E2E da Solução](https://github.com/murillonardi/mack_hands_on_seguranca_viaria/blob/main/documentacoes/arquitetura_e2e.png)
 
-##🛠️ Tecnologias e Ferramentas Utilizadas
+---
+
+## 🛠️ Tecnologias e Ferramentas Utilizadas
 **Cloud & Serverless**: Google Cloud Platform (GCP), Cloud Run, Cloud Storage, Artifact Registry, Eventarc, Cloud Workflows.
 
 **Engenharia de Dados**: BigQuery, Dataform (SQLX), Python (Pandas).
@@ -20,7 +22,7 @@ A arquitetura é totalmente serverless e nativa da **Google Cloud Platform (GCP)
 
 ---
 
-###📂 Estrutura de Diretórios e Descrição dos Arquivos
+## 📂 Estrutura de Diretórios e Descrição dos Arquivos
 
 Abaixo está o detalhamento de cada pasta e arquivo presente no repositório:
 
@@ -74,7 +76,7 @@ Abaixo está o detalhamento de cada pasta e arquivo presente no repositório:
 
 ---
 
-####🚀 Como Executar o Projeto Localmente
+## 🚀 Como Executar o Projeto Localmente
 
 **1. Executar o Dashboard Streamlit**
 Certifique-se de ter o Python 3.10+ instalado. Navegue até a pasta do dashboard e instale as dependências:
