@@ -54,10 +54,6 @@ variable "raw_data_image" {
   type = string
 }
 
-variable "dashboard_image" {
-  type = string
-}
-
 # --- CLOUD RUN SERVICE: RAW DATA CREATE ---
 resource "google_cloud_run_v2_service" "raw_data_create" {
   name     = "raw-data-create"
@@ -95,7 +91,7 @@ resource "google_cloud_run_v2_service" "dashboard" {
       min_instance_count = 0
     }
     containers {
-      image = var.dashboard_image  # <-- Recebe a imagem empacotada pelo GitHub Actions
+      image = var.dashboard-image  # <-- Recebe a imagem empacotada pelo GitHub Actions
       resources { 
         limits = { 
           memory = "2Gi"

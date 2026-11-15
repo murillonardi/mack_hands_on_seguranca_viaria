@@ -135,7 +135,7 @@ resource "google_cloud_run_v2_service" "dashboard" {
 
   template {
     containers {
-      image = var.dashboard_image # Variável contendo a tag da imagem do Artifact Registry
+      image = var.dashboard-image # Variável contendo a tag da imagem do Artifact Registry
       
       resources {
         limits = {
