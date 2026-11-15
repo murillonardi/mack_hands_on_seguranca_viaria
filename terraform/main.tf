@@ -91,7 +91,7 @@ resource "google_cloud_run_v2_service" "dashboard" {
       min_instance_count = 0
     }
     containers {
-      image = var.dashboard-image  # <-- Recebe a imagem empacotada pelo GitHub Actions
+      image = var.dashboard_image  # <-- Recebe a imagem empacotada pelo GitHub Actions
       resources { 
         limits = { 
           memory = "2Gi"
