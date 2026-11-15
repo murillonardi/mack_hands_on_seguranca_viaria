@@ -9,5 +9,3 @@ variable "region" {
   description = "Região padrão"
   default = "us-central1"
 }
-
-variable "dashboard_image" {}
