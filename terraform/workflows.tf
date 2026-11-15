@@ -125,5 +125,3 @@ resource "google_eventarc_trigger" "gcs_to_workflow_trigger" {
     google_project_iam_member.eventarc_workflow_invoker
   ]
 }
-  value = google_cloud_run_v2_service.dashboard.uri
-}
