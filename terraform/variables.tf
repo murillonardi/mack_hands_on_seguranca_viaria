@@ -1,11 +1,13 @@
 variable "project_id" {
-  type        = string
+  type = string
   description = "ID do projeto na GCP"
-  default     = "project-f1079166-4703-4cc3-975"
+  default = "project-f1079166-4703-4cc3-975"
 }
 
 variable "region" {
-  type        = string
+  type = string
   description = "Região padrão"
-  default     = "us-central1"
+  default = "us-central1"
 }
+
+variable "dashboard_image" {}

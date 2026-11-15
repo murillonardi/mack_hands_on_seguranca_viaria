@@ -54,6 +54,10 @@ variable "raw_data_image" {
   type = string
 }
 
+variable "dashboard_image" {
+  type = string
+}
+
 # --- CLOUD RUN SERVICE: RAW DATA CREATE ---
 resource "google_cloud_run_v2_service" "raw_data_create" {
   name     = "raw-data-create"
@@ -68,6 +72,30 @@ resource "google_cloud_run_v2_service" "raw_data_create" {
     }
     containers {
       image = var.raw_data_image  # <-- Recebe a imagem empacotada pelo GitHub Actions
+      resources { 
+        limits = { 
+          memory = "2Gi"
+          cpu = "1000m" 
+        } 
+      }
+    }
+  }
+}
+
+# --- CLOUD RUN SERVICE: DASHBOARD ---
+resource "google_cloud_run_v2_service" "dashboard" {
+  name     = "dashboard"
+  location = var.region
+  ingress  = "INGRESS_TRAFFIC_ALL"
+
+  template {
+    service_account = google_service_account.cloud_run_sa.email
+    scaling {
+      max_instance_count = 1
+      min_instance_count = 0
+    }
+    containers {
+      image = var.dashboard_image  # <-- Recebe a imagem empacotada pelo GitHub Actions
       resources { 
         limits = { 
           memory = "2Gi"
