@@ -11,21 +11,32 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- Carregamento de Dados com Cache ---
+# --- Nome do Bucket GCS ---
+BUCKET_NAME = "export-data-mack-hands-on"
+
+# --- Carregamento de Dados com Cache direto do GCS ---
 @st.cache_data
 def carregar_dados():
-    df_features = pd.read_csv('refined_ml_features.csv', compression='gzip')
-    df_local = pd.read_csv('dim_localizacao.csv', compression='gzip')
-    df_fct = pd.read_csv('fct_acidente.csv', compression='gzip')
-    df_tempo = pd.read_csv('dim_tempo.csv', compression='gzip')
+    # Nota: Certifique-se de que o pacote 'gcsfs' está listado no seu requirements.txt para o pandas ler o protocolo gs://
+    # Ajuste o sufixo '.csv' ou '.csv.gz' conforme o formato exato salvo no seu bucket
+    df_features = pd.read_csv(f'gs://{BUCKET_NAME}/refined_ml_features.csv', compression='gzip')
+    df_local = pd.read_csv(f'gs://{BUCKET_NAME}/dim_localizacao.csv', compression='gzip')
+    df_fct = pd.read_csv(f'gs://{BUCKET_NAME}/fct_acidente.csv', compression='gzip')
+    df_tempo = pd.read_csv(f'gs://{BUCKET_NAME}/dim_tempo.csv', compression='gzip')
     return df_features, df_local, df_fct, df_tempo
 
-with st.spinner("Carregando e processando os dados do sistema..."):
+with st.spinner("Carregando dados diretamente do Google Cloud Storage..."):
     df_features, df_local, df_fct, df_tempo = carregar_dados()
 
-# --- Execução do K-Means na base de features (Município x Ano) ---
+# --- Tratamento e Verificação do Cluster ---
 @st.cache_data
-def rodar_kmeans(df):
+def processar_clusters(df):
+    # Se o DataFrame já vier com a coluna 'cluster' gerada pelo modelo do Colab, apenas cria o label
+    if 'cluster' in df.columns:
+        df['cluster_label'] = "Cluster " + df['cluster'].astype(str)
+        return df
+    
+    # Fallback caso o CSV no bucket ainda não tenha a coluna cluster pronta
     colunas_modelo = [
         "taxa_acidentes_100k",
         "indice_fatalidade_proporcional_100k",
@@ -43,7 +54,7 @@ def rodar_kmeans(df):
     df['cluster_label'] = "Cluster " + df['cluster'].astype(str)
     return df
 
-df_features = rodar_kmeans(df_features)
+df_features = processar_clusters(df_features)
 
 # Mapeando o nome do município
 municipios_map = df_local[['cod_ibge', 'municipio']].drop_duplicates().set_index('cod_ibge')['municipio'].to_dict()
@@ -148,30 +159,4 @@ with col_A:
         x='ipdm_geral',
         y='taxa_acidentes_100k',
         color='cluster_label',
-        hover_name='nome_municipio',
-        size='taxa_acidentes_100k',
-        labels={'ipdm_geral': 'IPDM Geral', 'taxa_acidentes_100k': 'Taxa de Acidentes / 100k', 'cluster_label': 'Cluster'},
-        template='plotly_white'
-    )
-    st.plotly_chart(fig_scatter, use_container_width=True)
-
-with col_B:
-    st.subheader("Taxa Média de Acidentes por Cluster")
-    perfil_agg = df_filtrado.groupby('cluster_label')['taxa_acidentes_100k'].mean().reset_index()
-    fig_bar = px.bar(
-        perfil_agg,
-        x='cluster_label',
-        y='taxa_acidentes_100k',
-        color='cluster_label',
-        labels={'cluster_label': 'Cluster', 'taxa_acidentes_100k': 'Taxa Média de Acidentes / 100k'},
-        template='plotly_white'
-    )
-    st.plotly_chart(fig_bar, use_container_width=True)
-
-# --- Seção Inferior: Tabela Detalhada ---
-st.subheader("📋 Detalhamento dos Municípios no Filtro Atual")
-st.dataframe(
-    df_filtrado[['cod_ibge', 'nome_municipio', 'ano', 'cluster_label', 'ipdm_geral', 'taxa_acidentes_100k', 'indice_fatalidade_proporcional_100k']]
-    .sort_values(by='taxa_acidentes_100k', ascending=False),
-    use_container_width=True
-)
+        hover_name='nome_
