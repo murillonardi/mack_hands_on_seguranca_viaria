@@ -1,107 +1,70 @@
 name: Deploy Data Pipelines (Cloud Run & Terraform)
 
-# Define os eventos que disparam a execução automática do pipeline
 on:
   push:
     branches:
-      - main # Dispara o pipeline automaticamente a cada alteração enviada (push) para a branch 'main'
-  workflow_dispatch: # Permite a execução manual do pipeline diretamente pela interface do GitHub
+      - main
+  workflow_dispatch:
 
-# Declaração de variáveis globais de ambiente usadas em todo o fluxo
 env:
-  PROJECT_ID: "project-f1079166-4703-4cc3-975" # Identificador do projeto na Google Cloud Platform
-  REGION: "us-central1" # Região padrão onde os serviços serão hospedados
-  REPOSITORY: "data-pipelines-repo" # Nome do repositório no Artifact Registry
+  PROJECT_ID: "project-f1079166-4703-4cc3-975"
+  REGION: "us-central1"
+  REPOSITORY: "data-pipelines-repo"
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest # Define o sistema operacional runner (Ubuntu mais recente)
+    runs-on: ubuntu-latest
 
-    # Configuração de permissões de segurança para o runner
     permissions:
-      contents: read # Permite ler os arquivos do repositório
-      id-token: write # Permite gerar tokens OIDC para autenticação federada com a nuvem
+      contents: read
+      id-token: write
 
     steps:
-      # Passo 1: Clona/baixa o código-fonte atual do repositório no ambiente de execução
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Passo 2: Autentica o GitHub Actions na Google Cloud usando Workload Identity Federation
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: 'projects/38933711443/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
           service_account: 'mack-github-actions-deploy@project-f1079166-4703-4cc3-975.iam.gserviceaccount.com'
-      # Passo 3: Configura o Docker para autenticar e interagir com o Artifact Registry da GCP
+
+      # 1. Configurar Docker Client
       - name: Configure Docker Client
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      # --- ETAPA 4: CONSTRUÇÃO E ENVIO (BUILD & PUSH) DAS IMAGENS DOCKER DOS 5 SERVIÇOS DE INGESTÃO ---
-
-      # 4.1: Constrói e envia a imagem do pipeline InfoSiga
-      - name: Build & Push InfoSiga
+      # --- 2. BUILD & PUSH DA IMAGEM DO CLOUD RUN ÚNICO ---
+      # --- 2. BUILD & PUSH DA IMAGEM DO CLOUD RUN RAW DATA CREATE ---
+      - name: Build & Push Raw Data Create
         run: |
-          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/infosiga-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./cloudrun_services/infosiga
+          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/raw-data-create:${{ github.sha }}"
+          docker build -t $TAG ./cloudrun_services/raw_data_create
           docker push $TAG
-          echo "INFOSIGA_IMAGE=$TAG" >> $GITHUB_ENV
+          echo "RAW_DATA_IMAGE=$TAG" >> $GITHUB_ENV
 
-      # 4.2: Constrói e envia a imagem do SEADE IDPM
-      - name: Build & Push SEADE IDPM
+      # --- 2.1. BUILD & PUSH DA IMAGEM DO STREAMLIT (NOVO) ---
+      - name: Build & Push Streamlit Dashboard
         run: |
-          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-idpm-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./cloudrun_services/seade_idpm
-          docker push $TAG
-          echo "SEADE_IDPM_IMAGE=$TAG" >> $GITHUB_ENV
+          STREAMLIT_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/dashboard:${{ github.sha }}"
+          docker build -t $STREAMLIT_TAG ./cloudrun_services/dashboard         
+          docker push $STREAMLIT_TAG
+          echo "STREAMLIT_IMAGE=$STREAMLIT_TAG" >> $GITHUB_ENV
 
-      # 4.3: Constrói e envia a imagem do SEADE IDPM Grupos
-      - name: Build & Push SEADE IDPM Grupos
-        run: |
-          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-idpm-grupos-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./cloudrun_services/seade_idpm_grupos
-          docker push $TAG
-          echo "SEADE_IDPM_GRUPOS_IMAGE=$TAG" >> $GITHUB_ENV
-
-      # 4.4: Constrói e envia a imagem do SEADE Mortalidade
-      - name: Build & Push SEADE Mortalidade
-        run: |
-          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-mortalidade-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./cloudrun_services/seade_mortalidade
-          docker push $TAG
-          echo "SEADE_MORTALIDADE_IMAGE=$TAG" >> $GITHUB_ENV
-
-      # 4.5: Constrói e envia a imagem do SEADE IPVS Entorno
-      - name: Build & Push SEADE IPVS Entorno
-        run: |
-          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/seade-ipvs-entorno-ingestion:${{ github.sha }}"
-          docker build -t $TAG ./cloudrun_services/seade_ipvs_entorno
-          docker push $TAG
-          echo "SEADE_IPVS_ENTORNO_IMAGE=$TAG" >> $GITHUB_ENV
-
-      # --- ETAPA 5: PROVISIONAMENTO E ATUALIZAÇÃO DA INFRAESTRUTURA VIA TERRAFORM ---
-
-      # 5.1: Instala e configura a versão específica do Terraform no runner
+      # --- 3. INFRAESTRUTURA COMPLETA COM TERRAFORM ---
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.5.7"
 
-      # 5.2: Inicializa os arquivos de configuração, provedores e backend do Terraform
       - name: Terraform Init
         working-directory: ./terraform
         run: terraform init
 
-      # 5.3: Executa a aplicação do Terraform injetando as imagens recém-construídas
       - name: Terraform Apply (Infra + Cloud Run)
         working-directory: ./terraform
         env:
           TF_VAR_project_id: ${{ env.PROJECT_ID }}
           TF_VAR_region: ${{ env.REGION }}
-          TF_VAR_infosiga_image: ${{ env.INFOSIGA_IMAGE }}
-          TF_VAR_seade_image: ${{ env.SEADE_IPVS_IMAGE }}
-          TF_VAR_seade_idpm_image: ${{ env.SEADE_IDPM_IMAGE }}
-          TF_VAR_seade_idpm_grupos_image: ${{ env.SEADE_IDPM_GRUPOS_IMAGE }}
-          TF_VAR_seade_mortalidade_image: ${{ env.SEADE_MORTALIDADE_IMAGE }}
-          TF_VAR_seade_ipvs_entorno_image: ${{ env.SEADE_IPVS_ENTORNO_IMAGE }}
+          TF_VAR_raw_data_image: ${{ env.RAW_DATA_IMAGE }}
+          TF_VAR_streamlit_image: ${{ env.STREAMLIT_IMAGE }}
         run: terraform apply -auto-approve
