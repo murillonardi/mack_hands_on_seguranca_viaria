@@ -95,10 +95,11 @@ resource "google_cloud_run_v2_service" "dashboard" {
       ports {
         container_port = 8080
       }
-    resources {
-      limits = {
-        memory = "1Gi"
-        cpu    = "1"
+      resources {
+        limits = {
+          memory = "1Gi"
+          cpu    = "1"
+        }
       }
     }
   }
