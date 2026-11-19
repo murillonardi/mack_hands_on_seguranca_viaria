@@ -1,8 +1,8 @@
 import json
+import urllib.request
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from google.oauth2 import service_account
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
@@ -13,54 +13,28 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- Nome do Bucket GCS ---
-BUCKET_NAME = "export-data-mack-hands-on"
+# --- URL Base Pública do Bucket GCS ---
+BASE_URL = "https://storage.googleapis.com/export-data-mack-hands-on"
 
 
-def _get_gcp_credentials():
-    """Retorna credenciais da Service Account do st.secrets, se configuradas."""
-    try:
-        if "gcp_service_account" in st.secrets:
-            return service_account.Credentials.from_service_account_info(
-                dict(st.secrets["gcp_service_account"])
-            )
-    except Exception:
-        pass
-    return None
-
-
-def _get_gcs_storage_options():
-    """Monta storage_options compatível com gcsfs/Pandas."""
-    creds = _get_gcp_credentials()
-    if creds is not None:
-        return {"token": creds}
-    return {}
-
-
-# --- Carregamento de Dados com Cache Direto do GCS ---
+# --- Carregamento de Dados com Cache via URL HTTPS Pública ---
 @st.cache_data
 def carregar_dados():
-    # Certifique-se de que 'gcsfs' e 'google-auth' estão no requirements.txt
-    storage_opts = _get_gcs_storage_options()
     df_features = pd.read_csv(
-        f"gs://{BUCKET_NAME}/refined_ml_features.csv",
+        f"{BASE_URL}/refined_ml_features.csv",
         compression="gzip",
-        storage_options=storage_opts,
     )
     df_local = pd.read_csv(
-        f"gs://{BUCKET_NAME}/dim_localizacao.csv",
+        f"{BASE_URL}/dim_localizacao.csv",
         compression="gzip",
-        storage_options=storage_opts,
     )
     df_fct = pd.read_csv(
-        f"gs://{BUCKET_NAME}/fct_acidente.csv",
+        f"{BASE_URL}/fct_acidente.csv",
         compression="gzip",
-        storage_options=storage_opts,
     )
     df_tempo = pd.read_csv(
-        f"gs://{BUCKET_NAME}/dim_tempo.csv",
+        f"{BASE_URL}/dim_tempo.csv",
         compression="gzip",
-        storage_options=storage_opts,
     )
     return df_features, df_local, df_fct, df_tempo
 
@@ -189,18 +163,13 @@ with col_v5:
 
 st.markdown("---")
 
-# --- Carregamento do GeoJSON dos Municípios direto do GCS ---
+# --- Carregamento do GeoJSON dos Municípios via URL HTTPS Pública ---
 @st.cache_data
 def carregar_geojson():
+    geojson_url = f"{BASE_URL}/geojs-35-mun.json"
     try:
-        import gcsfs
-        creds = _get_gcp_credentials()
-        if creds is not None:
-            fs = gcsfs.GCSFileSystem(token=creds)
-        else:
-            fs = gcsfs.GCSFileSystem()
-        with fs.open(f"{BUCKET_NAME}/geojs-35-mun.json", "r", encoding="utf-8") as f:
-            return json.load(f)
+        with urllib.request.urlopen(geojson_url, timeout=30) as response:
+            return json.loads(response.read().decode("utf-8"))
     except Exception:
         with open("geojs-35-mun.json", "r", encoding="utf-8") as f:
             return json.load(f)
