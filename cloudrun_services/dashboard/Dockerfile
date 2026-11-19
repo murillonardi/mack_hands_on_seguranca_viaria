@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app
 
 # Expõe a porta que o Streamlit utiliza por padrão
+ENV PORT=8080
 EXPOSE 8080
 
-# Configura o Streamlit para rodar na porta 8080 e escutar em todas as interfaces
-CMD ["streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0", "--server.headless=true"]
+CMD streamlit run app.py --server.port=${PORT:-8080} --server.address=0.0.0.0
