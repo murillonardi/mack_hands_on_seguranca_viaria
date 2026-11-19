@@ -104,3 +104,11 @@ resource "google_cloud_run_v2_service" "dashboard" {
     }
   }
 }
+
+resource "google_cloud_run_v2_service_iam_member" "dashboard_public" {
+  project  = google_cloud_run_v2_service.dashboard.project
+  location = google_cloud_run_v2_service.dashboard.location
+  name     = google_cloud_run_v2_service.dashboard.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
