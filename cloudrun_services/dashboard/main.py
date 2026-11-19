@@ -1,10 +1,10 @@
-import streamlit as st
-import pandas as pd
 import json
-import urllib.request
-from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
+import pandas as pd
 import plotly.express as px
+import streamlit as st
+from google.oauth2 import service_account
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
 
 # --- Configuração da Página ---
 st.set_page_config(
@@ -16,15 +16,54 @@ st.set_page_config(
 # --- Nome do Bucket GCS ---
 BUCKET_NAME = "export-data-mack-hands-on"
 
+
+def _get_gcp_credentials():
+    """Retorna credenciais da Service Account do st.secrets, se configuradas."""
+    try:
+        if "gcp_service_account" in st.secrets:
+            return service_account.Credentials.from_service_account_info(
+                dict(st.secrets["gcp_service_account"])
+            )
+    except Exception:
+        pass
+    return None
+
+
+def _get_gcs_storage_options():
+    """Monta storage_options compatível com gcsfs/Pandas."""
+    creds = _get_gcp_credentials()
+    if creds is not None:
+        return {"token": creds}
+    return {}
+
+
 # --- Carregamento de Dados com Cache Direto do GCS ---
 @st.cache_data
 def carregar_dados():
-    # Certifique-se de que o pacote 'gcsfs' está no seu requirements.txt para o Pandas ler gs://
-    df_features = pd.read_csv(f'gs://{BUCKET_NAME}/refined_ml_features.csv', compression='gzip')
-    df_local = pd.read_csv(f'gs://{BUCKET_NAME}/dim_localizacao.csv', compression='gzip')
-    df_fct = pd.read_csv(f'gs://{BUCKET_NAME}/fct_acidente.csv', compression='gzip')
-    df_tempo = pd.read_csv(f'gs://{BUCKET_NAME}/dim_tempo.csv', compression='gzip')
+    # Certifique-se de que 'gcsfs' e 'google-auth' estão no requirements.txt
+    storage_opts = _get_gcs_storage_options()
+    df_features = pd.read_csv(
+        f"gs://{BUCKET_NAME}/refined_ml_features.csv",
+        compression="gzip",
+        storage_options=storage_opts,
+    )
+    df_local = pd.read_csv(
+        f"gs://{BUCKET_NAME}/dim_localizacao.csv",
+        compression="gzip",
+        storage_options=storage_opts,
+    )
+    df_fct = pd.read_csv(
+        f"gs://{BUCKET_NAME}/fct_acidente.csv",
+        compression="gzip",
+        storage_options=storage_opts,
+    )
+    df_tempo = pd.read_csv(
+        f"gs://{BUCKET_NAME}/dim_tempo.csv",
+        compression="gzip",
+        storage_options=storage_opts,
+    )
     return df_features, df_local, df_fct, df_tempo
+
 
 with st.spinner("Carregando e processando os dados do Google Cloud Storage..."):
     df_features, df_local, df_fct, df_tempo = carregar_dados()
@@ -43,7 +82,7 @@ def processar_clusters(df):
     if 'cluster' in df.columns:
         df['cluster_label'] = df['cluster'].map(cluster_nomes).fillna("Cluster " + df['cluster'].astype(str))
         return df
-        
+
     colunas_modelo = [
         "taxa_acidentes_100k",
         "indice_fatalidade_proporcional_100k",
@@ -51,15 +90,16 @@ def processar_clusters(df):
         "pct_envolvem_motocicleta",
         "pct_acidente_primario_colisao"
     ]
-    
+
     X = df[colunas_modelo].fillna(0)
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    
+
     kmeans = KMeans(n_clusters=5, random_state=42, n_init=10)
     df['cluster'] = kmeans.fit_predict(X_scaled)
     df['cluster_label'] = df['cluster'].map(cluster_nomes).fillna("Cluster " + df['cluster'].astype(str))
     return df
+
 
 df_features = processar_clusters(df_features)
 
@@ -82,8 +122,8 @@ df_features = pd.merge(df_features, df_coords_agg, on='cod_ibge', how='left')
 anos_disponiveis = sorted([a for a in df_features['ano'].unique() if 2019 <= a <= 2024])
 
 anos_selecionados = st.sidebar.multiselect(
-    "Selecione o(s) Ano(s)", 
-    options=anos_disponiveis, 
+    "Selecione o(s) Ano(s)",
+    options=anos_disponiveis,
     default=anos_disponiveis
 )
 
@@ -95,7 +135,7 @@ municipios_selecionados = st.sidebar.multiselect("Filtrar por Município(s)", li
 
 # Aplicando os filtros
 df_filtrado = df_features[
-    (df_features['ano'].isin(anos_selecionados)) & 
+    (df_features['ano'].isin(anos_selecionados)) &
     (df_features['cluster_label'].isin(clusters_selecionados))
 ]
 
@@ -154,12 +194,17 @@ st.markdown("---")
 def carregar_geojson():
     try:
         import gcsfs
-        fs = gcsfs.GCSFileSystem()
+        creds = _get_gcp_credentials()
+        if creds is not None:
+            fs = gcsfs.GCSFileSystem(token=creds)
+        else:
+            fs = gcsfs.GCSFileSystem()
         with fs.open(f"{BUCKET_NAME}/geojs-35-mun.json", "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         with open("geojs-35-mun.json", "r", encoding="utf-8") as f:
             return json.load(f)
+
 
 geojson_sp = carregar_geojson()
 df_filtrado['cod_ibge_str'] = df_filtrado['cod_ibge'].astype(str)
@@ -187,10 +232,10 @@ if not df_filtrado.empty:
         projection="mercator",
         height=600
     )
-    
+
     fig_map.update_geos(fitbounds="locations", visible=False)
-    fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
-    
+    fig_map.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+
     st.plotly_chart(fig_map, use_container_width=True)
 else:
     st.warning("Não há dados suficientes para exibir no mapa com os filtros selecionados.")
@@ -201,7 +246,7 @@ col_A, col_B = st.columns(2)
 with col_A:
     st.subheader("Relação: IPDM Geral vs. Taxa de Acidentes")
     df_scatter_clean = df_filtrado.dropna(subset=['ipdm_geral', 'taxa_acidentes_100k'])
-    
+
     fig_scatter = px.scatter(
         df_scatter_clean,
         x='ipdm_geral',
@@ -288,9 +333,9 @@ if all(c in df_filtrado.columns for c in cols_periodos):
     }
     df_melted['Periodo'] = df_melted['Periodo'].map(periodo_map)
     df_melted['Percentual'] = df_melted['Percentual'] * 100
-    
+
     perfil_tempo = df_melted.groupby(['cluster_label', 'Periodo'])['Percentual'].mean().reset_index()
-    
+
     fig_tempo = px.bar(
         perfil_tempo,
         x='cluster_label',
@@ -319,17 +364,17 @@ try:
         df_fct_ano = df_fct.copy()
 
     colunas_possiveis_tipo = [c for c in df_fct_ano.columns if 'tipo' in c.lower() or 'acidente' in c.lower() or 'natureza' in c.lower()]
-    colunas_possiveis_obito = [c for c in df_fct_ano.columns if 'obito' in c.lower()  or 'fatal' in c.lower() or 'mort' in c.lower() or 'vitima' in c.lower()]
+    colunas_possiveis_obito = [c for c in df_fct_ano.columns if 'obito' in c.lower() or 'fatal' in c.lower() or 'mort' in c.lower() or 'vitima' in c.lower()]
 
     if colunas_possiveis_tipo and colunas_possiveis_obito:
         tipo_col = colunas_possiveis_tipo[0]
         obito_col = colunas_possiveis_obito[0]
-        
+
         df_mortalidade = df_fct_ano.groupby(tipo_col).agg(
             total_acidentes=('id_acidente' if 'id_acidente' in df_fct_ano.columns else tipo_col, 'count'),
             total_obitos=(obito_col, 'sum')
         ).reset_index()
-        
+
         df_mortalidade['taxa_mortalidade_pct'] = (df_mortalidade['total_obitos'] / df_mortalidade['total_acidentes']) * 100
         df_mortalidade = df_mortalidade.sort_values(by='total_obitos', ascending=False).head(10)
 
@@ -343,7 +388,7 @@ try:
             labels={tipo_col: 'Tipo de Acidente', 'total_obitos': 'Total de Óbitos / Vitais'},
             template='plotly_white'
         )
-        fig_mortalidade.update_layout(yaxis={'categoryorder':'total ascending'})
+        fig_mortalidade.update_layout(yaxis={'categoryorder': 'total ascending'})
         st.plotly_chart(fig_mortalidade, use_container_width=True)
 except Exception as e:
     st.warning(f"Não foi possível renderizar o gráfico detalhado de tipos de acidentes automaticamente: {e}.")
