@@ -96,6 +96,14 @@ terraform init
 terraform plan -var="project_id=SEU_PROJECT_ID" -var="region=us-central1"
 terraform apply`
 
+---
+
+## 🏗️ Link do Dashboard
+
+![Dashboard Analítico de Segurança Viária e Clusters](https://mackhandsonsegurancaviaria-heptmmbypgzb7nvrb6ufcc.streamlit.app)
+
+---
+
 ##📄 Licença
 Desenvolvido para fins educacionais e aplicados de engenharia de dados e segurança viária.
 
